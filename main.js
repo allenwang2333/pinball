@@ -28,6 +28,7 @@ function init() {
     createPlayfield();
     createFlippers();
     createBumpers();
+    createSpeedBump();
     createBall();
 
     // Event listeners
@@ -53,7 +54,7 @@ function createPlayfield() {
     scene.add(rightWall);
 
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(15, 2, 1), wallMaterial);
-    backWall.position.set(0, 1, 15.5);
+    backWall.position.set(0, 1, -15);
     scene.add(backWall);
 }
 
@@ -62,38 +63,54 @@ function createFlippers() {
     
     // Left flipper
     leftFlipper = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 0.5, 1),
+        new THREE.BoxGeometry(4, 0.5, 0.2),
         flipperMaterial
     );
-    leftFlipper.position.set(-4, 0.5, -12);
+    leftFlipper.position.set(-4, 0.5, 12);
     leftFlipper.rotation.y = -0.3;
     scene.add(leftFlipper);
     // Right flipper
     rightFlipper = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 0.5, 1),
+        new THREE.BoxGeometry(4, 0.5, 0.2),
         flipperMaterial
     );
-    rightFlipper.position.set(4, 0.5, -12);
+    rightFlipper.position.set(4, 0.5, 12);
     rightFlipper.rotation.y = 0.3;
     scene.add(rightFlipper);
 }
 
 function createBumpers() {
-    const bumperGeometry = new THREE.SphereGeometry(1, 32, 32);
+    const bumperGeometry = new THREE.CylinderGeometry(1, 1, 1.5);
     const bumperMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff });
     
     // Create bumpers
     const bumper1 = new THREE.Mesh(bumperGeometry, bumperMaterial);
-    bumper1.position.set(0, 1, 5);
+    bumper1.position.set(0, 1, -5);
     scene.add(bumper1);
 
     const bumper2 = new THREE.Mesh(bumperGeometry, bumperMaterial);
-    bumper2.position.set(-3, 1, 8);
+    bumper2.position.set(-3, 1, -8);
     scene.add(bumper2);
 
     const bumper3 = new THREE.Mesh(bumperGeometry, bumperMaterial);
-    bumper3.position.set(3, 1, 8);
+    bumper3.position.set(3, 1, -8);
     scene.add(bumper3);
+}
+
+function createSpeedBump() {
+    const speedBumpGeometry = new THREE.BoxGeometry(4.5, 0.0000001, 1.2);
+    const speedBumpMaterial = new THREE.MeshPhongMaterial({ color: 0xffff20});
+
+    // Create speedBump
+    const speedBump1 = new THREE.Mesh(speedBumpGeometry, speedBumpMaterial);
+    const speedBump2 = new THREE.Mesh(speedBumpGeometry, speedBumpMaterial);
+    speedBump1.position.set(-3, 1, 2);
+    speedBump2.position.set(3, 1, 2);
+    speedBump1.rotation.y =  -Math.PI/5;
+    speedBump2.rotation.y = Math.PI/5;
+    
+    scene.add(speedBump1);
+    scene.add(speedBump2);
 }
 
 function createBall() {
