@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -228,4 +229,3 @@ animate();
 
     // Handle window resize
 window.addEventListener('resize', onWindowResize, false);
-
