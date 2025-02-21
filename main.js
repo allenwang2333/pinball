@@ -7,12 +7,23 @@ let leftFlipper, rightFlipper;
 let ballVelocity = new THREE.Vector3(0, 0, 0);
 let controls;
 const GRAVITY = -0.001;
-const FLIPPER_SPEED = 1;
-const FLIPPER_DEFAULT_ANGLE = -0.4;
+const FLIPPER_SPEED = Math.PI/18;
+const FLIPPER_DEFAULT_ANGLE = -Math.PI/4;
 const BOUNCE_FACTOR = 0.8;
 const DEFAULT_TILT = Math.PI / 3;
+const MAX_FLIPER_ANGLE = 0;
 let leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
 let rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+
+let leftFlipperAxis = new THREE.Vector4(0, 0, 0, 1);
+let curLeftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+const INITIAL_LEFT_FLIPPER_POSITION = new THREE.Vector3();
+let isLeftFlipper = false;
+
+let rightFlipperAxis = new THREE.Vector4(0, 0, 0, 1);
+let curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+const INITIAL_RIGHT_FLIPPER_POSITION = new THREE.Vector3();
+let isRightFlipper = false;
 
 function init() {
     // Scene setup
@@ -44,6 +55,7 @@ function init() {
     createPlayField();
     createFlippers();
     createBumpers();
+    createSpeedBump();
     createBall();
 
     // Event listeners
@@ -77,7 +89,6 @@ function rotationMatrixZ(theta) {
                   0,               0,  0, 1
 	);
 }
-
 
 function translationMatrix(tx, ty, tz) {
 	return new THREE.Matrix4().set(
@@ -130,20 +141,37 @@ function createFlippers() {
     
     // Left flipper
     leftFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
-    leftFlipper.position.set(-4, 0.25, 12);
+    leftFlipper.position.set(-4, 0.25, 8);
     leftFlipper.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
+    
+    let initLeft = leftFlipper.position.clone();
+    INITIAL_LEFT_FLIPPER_POSITION.set(initLeft.x, initLeft.y, initLeft.z);
     scene.add(leftFlipper);
+    
+
+    leftFlipperAxis.set(initLeft.x-2.5, initLeft.y, initLeft.z, 1);
+    leftFlipperAxis.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
+    
+    resetLeftFlipper();
 
 
     // Right flipper
     rightFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
-    rightFlipper.position.set(4, 0.25, 12);
+    rightFlipper.position.set(4, 0.25, 8);
     rightFlipper.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
+
+    let initRight = rightFlipper.position.clone();
+    INITIAL_RIGHT_FLIPPER_POSITION.set(initRight.x, initRight.y, initRight.z);
     scene.add(rightFlipper);
+
+    rightFlipperAxis.set(initRight.x+2.5, initRight.y, initRight.z, 1);
+    rightFlipperAxis.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
+    
+    resetRightFlipper();
 }
 
 function createBumpers() {
-    const bumperGeometry = new THREE.SphereGeometry(1, 32, 32);
+    const bumperGeometry = new THREE.CylinderGeometry(1, 1, 2);
     const bumperMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff });
     
     // Create bumpers
@@ -195,31 +223,48 @@ function createBall() {
 
 function handleKeyDown(event) {
     if (event.key === 'z') {
-        leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
+        leftFlipperAngle = Math.max(leftFlipperAngle - FLIPPER_SPEED, MAX_FLIPER_ANGLE);
+        isLeftFlipper = true;
     }
-    if (event.key === 'z') {
-        leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
+    else if (event.key === 'Z') {
+        leftFlipperAngle = Math.max(leftFlipperAngle - FLIPPER_SPEED, MAX_FLIPER_ANGLE);
+        isLeftFlipper = true;
     }
+
     if (event.key === '/') {
-        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
+        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, MAX_FLIPER_ANGLE);
+        isRightFlipper = true;
     }
-    if (event.key === '/') {
-        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
+    else if (event.key === '?') {
+        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, MAX_FLIPER_ANGLE);
+        isRightFlipper = true;
     }
 }
 
 function handleKeyUp(event) {
     if (event.key === 'z') {
         leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        curLeftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        resetLeftFlipper();
+        isLeftFlipper = false;
     } 
-    if (event.key === '/') {
-        rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-    }
-    if (event.key === 'z') {
+    if (event.key === 'Z') {
         leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-    } 
+        curLeftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        resetLeftFlipper();
+        isLeftFlipper = false;
+    }
+    if (event.key === '?') {
+        rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        resetRightFlipper();
+        isRightFlipper = false;
+    }
     if (event.key === '/') {
         rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+        resetRightFlipper();
+        isRightFlipper = false;
     }
 }
 
@@ -280,17 +325,62 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function updateLeftFlipper() {
+    if (curLeftFlipperAngle < MAX_FLIPER_ANGLE && isLeftFlipper) {
+        leftFlipper.applyMatrix4(translationMatrix(-leftFlipperAxis.x, -leftFlipperAxis.y, -leftFlipperAxis.z));
+        leftFlipper.applyMatrix4(rotationMatrixY(Math.PI/2));
+        leftFlipper.applyMatrix4(rotationMatrixZ(-DEFAULT_TILT));
+        leftFlipper.applyMatrix4(rotationMatrixX(FLIPPER_SPEED));
+        leftFlipper.applyMatrix4(rotationMatrixZ(DEFAULT_TILT));
+        leftFlipper.applyMatrix4(rotationMatrixY(- Math.PI/2));
+        leftFlipper.applyMatrix4(translationMatrix(leftFlipperAxis.x, leftFlipperAxis.y, leftFlipperAxis.z));
+        curLeftFlipperAngle += FLIPPER_SPEED;
+    }
+}
+
+function updateRightFlipper() {
+    if (curRightFlipperAngle < MAX_FLIPER_ANGLE && isRightFlipper) {
+        rightFlipper.applyMatrix4(translationMatrix(-rightFlipperAxis.x, -rightFlipperAxis.y, -rightFlipperAxis.z));
+        rightFlipper.applyMatrix4(rotationMatrixY(Math.PI/2));
+        rightFlipper.applyMatrix4(rotationMatrixZ(-DEFAULT_TILT));
+        rightFlipper.applyMatrix4(rotationMatrixX(-FLIPPER_SPEED));
+        rightFlipper.applyMatrix4(rotationMatrixZ(DEFAULT_TILT));
+        rightFlipper.applyMatrix4(rotationMatrixY(- Math.PI/2));
+        rightFlipper.applyMatrix4(translationMatrix(rightFlipperAxis.x, rightFlipperAxis.y, rightFlipperAxis.z));
+        curRightFlipperAngle += FLIPPER_SPEED;
+    }
+}
+
+function resetLeftFlipper() {
+    leftFlipper.position.set(INITIAL_LEFT_FLIPPER_POSITION.x, INITIAL_LEFT_FLIPPER_POSITION.y, INITIAL_LEFT_FLIPPER_POSITION.z);
+    leftFlipper.rotation.y = 0;
+    leftFlipper.applyMatrix4(translationMatrix(-leftFlipperAxis.x, -leftFlipperAxis.y, -leftFlipperAxis.z));
+    leftFlipper.applyMatrix4(rotationMatrixY(Math.PI/2));
+    leftFlipper.applyMatrix4(rotationMatrixZ(-DEFAULT_TILT));
+    leftFlipper.applyMatrix4(rotationMatrixX(FLIPPER_DEFAULT_ANGLE));
+    leftFlipper.applyMatrix4(rotationMatrixZ(DEFAULT_TILT));
+    leftFlipper.applyMatrix4(rotationMatrixY(- Math.PI/2));
+    leftFlipper.applyMatrix4(translationMatrix(leftFlipperAxis.x, leftFlipperAxis.y, leftFlipperAxis.z));
+}
+
+function resetRightFlipper() {
+    rightFlipper.position.set(INITIAL_RIGHT_FLIPPER_POSITION.x, INITIAL_RIGHT_FLIPPER_POSITION.y, INITIAL_RIGHT_FLIPPER_POSITION.z);
+    rightFlipper.rotation.y = 0;
+    rightFlipper.applyMatrix4(translationMatrix(-rightFlipperAxis.x, -rightFlipperAxis.y, -rightFlipperAxis.z));
+    rightFlipper.applyMatrix4(rotationMatrixY(Math.PI/2));
+    rightFlipper.applyMatrix4(rotationMatrixZ(-DEFAULT_TILT));
+    rightFlipper.applyMatrix4(rotationMatrixX(-FLIPPER_DEFAULT_ANGLE));
+    rightFlipper.applyMatrix4(rotationMatrixZ(DEFAULT_TILT));
+    rightFlipper.applyMatrix4(rotationMatrixY(- Math.PI/2));
+    rightFlipper.applyMatrix4(translationMatrix(rightFlipperAxis.x, rightFlipperAxis.y, rightFlipperAxis.z));
+}
+
 function animate() {
     controls.update();
-    controls.update();
     requestAnimationFrame(animate);
-    
-    leftFlipper.rotation.y = leftFlipperAngle;
-    rightFlipper.rotation.y = -rightFlipperAngle;
-    
-    
-    leftFlipper.rotation.y = leftFlipperAngle;
-    rightFlipper.rotation.y = -rightFlipperAngle;
+
+    updateLeftFlipper();
+    updateRightFlipper();
     
     updatePhysics();
     renderer.render(scene, camera);
@@ -299,7 +389,5 @@ function animate() {
 init();
 animate();
 
-
-
-    // Handle window resize
+// Handle window resize
 window.addEventListener('resize', onWindowResize, false);
