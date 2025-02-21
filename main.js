@@ -44,6 +44,7 @@ function init() {
     createPlayField();
     createFlippers();
     createBumpers();
+    createSpeedBump();
     createBall();
 
     // Event listeners
