@@ -1,7 +1,6 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 let scene, camera, renderer, ball;
 let leftFlipper, rightFlipper;
@@ -27,8 +26,6 @@ function init() {
     controls = new OrbitControls(camera, renderer.domElement);
 
 
-    const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper)
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper)
     // Lighting
@@ -199,11 +196,13 @@ function createBall() {
 function handleKeyDown(event) {
     if (event.key === 'z') {
         leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
+    }
     if (event.key === 'z') {
         leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
     }
     if (event.key === '/') {
         rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
+    }
     if (event.key === '/') {
         rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
     }
@@ -215,6 +214,7 @@ function handleKeyUp(event) {
     } 
     if (event.key === '/') {
         rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+    }
     if (event.key === 'z') {
         leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
     } 
@@ -232,6 +232,7 @@ function updatePhysics() {
 
     // Table collision (ground)
     if (ball.position.y < 0.5) {
+    }
     // Table collision (ground)
     if (ball.position.y < 0.5) {
         ball.position.y = 0.5;
