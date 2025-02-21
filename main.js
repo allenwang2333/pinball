@@ -1,4 +1,6 @@
+
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 let scene, camera, renderer, ball;
@@ -22,7 +24,11 @@ function init() {
     document.body.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement);
 
+    controls = new OrbitControls(camera, renderer.domElement);
 
+
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper)
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper)
     // Lighting
@@ -34,12 +40,13 @@ function init() {
 
     // Camera position
     camera.position.set(0, 30, 15);
+    camera.position.set(0, 30, 15);
     camera.lookAt(0, 0, 0);
 
     createPlayField();
+    createPlayField();
     createFlippers();
     createBumpers();
-    createSpeedBump();
     createBall();
 
     // Event listeners
@@ -130,6 +137,7 @@ function createFlippers() {
     leftFlipper.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
     scene.add(leftFlipper);
 
+
     // Right flipper
     rightFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
     rightFlipper.position.set(4, 0.25, 12);
@@ -138,7 +146,7 @@ function createFlippers() {
 }
 
 function createBumpers() {
-    const bumperGeometry = new THREE.CylinderGeometry(1, 1, 1.5);
+    const bumperGeometry = new THREE.SphereGeometry(1, 32, 32);
     const bumperMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff });
     
     // Create bumpers
@@ -185,12 +193,17 @@ function createBall() {
     ball.position.set(0, 5, 0);
     scene.add(ball);
 
+
 }
 
 function handleKeyDown(event) {
     if (event.key === 'z') {
         leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
+    if (event.key === 'z') {
+        leftFlipperAngle = Math.min(leftFlipperAngle - FLIPPER_SPEED, Math.PI/4);
     }
+    if (event.key === '/') {
+        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
     if (event.key === '/') {
         rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, Math.PI/4);
     }
@@ -202,14 +215,23 @@ function handleKeyUp(event) {
     } 
     if (event.key === '/') {
         rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+    if (event.key === 'z') {
+        leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
+    } 
+    if (event.key === '/') {
+        rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
     }
 }
 
 function updatePhysics() {
 
     ballVelocity.y += GRAVITY;
+
+    ballVelocity.y += GRAVITY;
     ball.position.add(ballVelocity);
 
+    // Table collision (ground)
+    if (ball.position.y < 0.5) {
     // Table collision (ground)
     if (ball.position.y < 0.5) {
         ball.position.y = 0.5;
@@ -259,7 +281,12 @@ function onWindowResize() {
 
 function animate() {
     controls.update();
+    controls.update();
     requestAnimationFrame(animate);
+    
+    leftFlipper.rotation.y = leftFlipperAngle;
+    rightFlipper.rotation.y = -rightFlipperAngle;
+    
     
     leftFlipper.rotation.y = leftFlipperAngle;
     rightFlipper.rotation.y = -rightFlipperAngle;
@@ -270,6 +297,7 @@ function animate() {
 
 init();
 animate();
+
 
 
     // Handle window resize
