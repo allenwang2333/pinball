@@ -25,6 +25,34 @@ let curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
 const INITIAL_RIGHT_FLIPPER_POSITION = new THREE.Vector3();
 let isRightFlipper = false;
 
+class BoardShader {
+    vertexShader() {
+        return `
+        uniform sampler2D uTexture;
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        void main() {
+            vUv = uv;
+            vPosition = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+        `;
+    }
+
+    fragmentShader() {
+        return `
+        uniform sampler2D uTexture;
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        void main() {    
+            vec2 newUv = vUv * 10.0;
+            vec4 tex_color = texture2D(uTexture, newUv);
+            gl_FragColor = tex_color;
+        }
+        `;
+    }
+}
+
 function init() {
     // Scene setup
     scene = new THREE.Scene();
@@ -102,14 +130,23 @@ function translationMatrix(tx, ty, tz) {
 function createPlayField() {
     // Main table
     const tableGeometry = new THREE.PlaneGeometry(20, 30);
-    const tableMaterial = new THREE.MeshPhongMaterial({ color: 0x3cb371 });
+    // snooker table texture find it online
+    const tableTexture = new THREE.TextureLoader().load('assets/board.jpg');
+    tableTexture.wrapS = THREE.RepeatWrapping;
+    tableTexture.wrapT = THREE.RepeatWrapping;
+    tableTexture.repeat.set( 2, 3 );
+    const tableMaterial = new THREE.MeshPhongMaterial( {map: tableTexture } );
+
     const table = new THREE.Mesh(tableGeometry, tableMaterial);
     table.applyMatrix4(rotationMatrixX(-DEFAULT_TILT));
     scene.add(table);
 
     // Walls
     const wallGeometry = new THREE.BoxGeometry(1, 2, 30);
-    const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x660000 });
+    const wallTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+    wallTexture.wrapS = THREE.RepeatWrapping;
+    wallTexture.wrapT = THREE.RepeatWrapping;
+    const wallMaterial = new THREE.MeshPhongMaterial({ map: wallTexture });
 
     const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
     leftWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
