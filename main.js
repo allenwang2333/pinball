@@ -13,6 +13,8 @@ import {
     PLAY_FIELD_CONS,
 } from './constants';
 
+let temp;
+
 class PinballGame{
     constructor(){
         this.scene = new THREE.Scene();
@@ -54,6 +56,8 @@ class PinballGame{
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
         this.onWindowResize = this.onWindowResize.bind(this);
+        this.updatePhysics = this.updatePhysics.bind(this);
+        this.checkCollision = this.checkCollision.bind(this);
         this.init();
     }
 
@@ -119,6 +123,9 @@ class PinballGame{
 
     createFlippers(){
         const flipperGeometry = new THREE.BoxGeometry(FLIPPER_CONS.width, FLIPPER_CONS.height, FLIPPER_CONS.depth);
+        flipperGeometry.userData.obb = new OBB();
+        const size = new THREE.Vector3(FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, FLIPPER_CONS.depth/2);
+        flipperGeometry.userData.obb.halfSize.copy(size);
         const flipperMaterial = new THREE.MeshPhongMaterial({ color: FLIPPER_CONS.color });
         this.leftFlipperBox = new THREE.Mesh(flipperGeometry, flipperMaterial);
         this.leftFlipper = new THREE.Group();
@@ -126,6 +133,7 @@ class PinballGame{
         this.leftFlipperBox.position.set(FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
         this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
         this.leftFlipper.rotation.z = -FLIPPER_CONS.init_angle;
+        this.leftFlipperBox.userData.obb = new OBB();
         this.playField.add(this.leftFlipper);
         this.rightFlipperBox = new THREE.Mesh(flipperGeometry, flipperMaterial);
         this.rightFlipper = new THREE.Group();
@@ -162,12 +170,12 @@ class PinballGame{
         const speedBumpGeometry = new THREE.BoxGeometry(SPEED_BUMPER_CONS.width, SPEED_BUMPER_CONS.height, SPEED_BUMPER_CONS.depth);
         const speedBumpMaterial = new THREE.MeshPhongMaterial({ color: SPEED_BUMPER_CONS.color });
         const speedBump1 = new THREE.Mesh(speedBumpGeometry, speedBumpMaterial);
-        speedBump1.position.set(-3.5, -1, 1);
+        speedBump1.position.set(-3.5, -1, 0.1);
         speedBump1.rotation.z = -SPEED_BUMPER_CONS.init_angle;
         this.playField.add(speedBump1);
         this.speedBumps.push(speedBump1);
         const speedBump2 = new THREE.Mesh(speedBumpGeometry, speedBumpMaterial);
-        speedBump2.position.set(3.5, -1, 1);
+        speedBump2.position.set(3.5, -1, 0.1);
         speedBump2.rotation.z = SPEED_BUMPER_CONS.init_angle;
         this.playField.add(speedBump2);
         this.speedBumps.push(speedBump2);
@@ -194,7 +202,6 @@ class PinballGame{
         switch (event.key) {
             case 'z':
             case 'Z':
-                console.log("left active");
                 this.isLeftActive = true;
                 break;
             case '/':
@@ -221,7 +228,6 @@ class PinballGame{
 
     updateFlippers(delta){
         if (this.isLeftActive) {
-            // console.log("left active");
             this.leftFlipper.rotation.z = Math.min(this.leftFlipper.rotation.z + FLIPPER_CONS.speed * delta, FLIPPER_CONS.max_angle);
         }
         else {
@@ -241,63 +247,17 @@ class PinballGame{
         this.checkCollision();
     }
 
-    checkCollision(){
-        if (!this.ball.obb) {
-            this.ball.obb = createOBB(this.ball);
-        } else {
-            updateOBB(this.ball, this.ball.obb);
-        }
-        for (const wall of this.walls) {
-            if (!wall.obb) {
-                wall.obb = createOBB(wall);
-            }
-            else {
-                updateOBB(wall, wall.obb);
-            }
-            if (this.ball.obb.intersectsOBB(wall.obb)) {
-                this.handleWallCollision();
-            }
-        }
-        for (const bumper of this.bumpers) {
-            if (!bumper.obb) {
-                bumper.obb = createOBB(bumper);
-            }
-            else {
-                updateOBB(bumper, bumper.obb);
-            }
-            if (this.ball.obb.intersectsOBB(bumper.obb)) {
-                this.handleBumperCollision();
-            }
-        }
-        for (const speedBump of this.speedBumps) {
-            if (!speedBump.obb) {
-                speedBump.obb = createOBB(speedBump);
-            }
-            else {
-                updateOBB(speedBump, speedBump.obb);
-            }
-            if (this.ball.obb.intersectsOBB(speedBump.obb)) {
-                this.handleSpeedBumpCollision();
-            }
-        }
-        if (!this.leftFlipperBox.obb) {
-            this.leftFlipperBox.obb = createOBB(this.leftFlipperBox);
+    checkCollision() {
+        if (!temp) {
+            temp = this.leftFlipperBox.userData.obb;
         }
         else {
-            updateOBB(this.leftFlipperBox, this.leftFlipperBox.obb);
+            if (temp.center !== this.leftFlipperBox.userData.obb.center) {
+                console.log('center changed');
+            }
         }
-        if (this.ball.obb.intersectsOBB(this.leftFlipperBox.obb)) {
-            this.handleFlipperCollision(this.leftFlipperBox);
-        }
-        if (!this.rightFlipperBox.obb) {
-            this.rightFlipperBox.obb = createOBB(this.rightFlipperBox);
-        }
-        else {
-            updateOBB(this.rightFlipperBox, this.rightFlipperBox.obb);
-        }
-        if (this.ball.obb.intersectsOBB(this.rightFlipperBox.obb)) {
-            this.handleFlipperCollision();
-        }
+        // console.log(this.leftFlipperBox.userData.obb);
+        // console.log(this.leftFlipperBox.userData.obb.intersectsOBB(this.leftFlipperBox.userData.obb));
     }
 
     handleWallCollision(){
@@ -329,6 +289,10 @@ class PinballGame{
         const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
         this.updateFlippers(deltaTime);    
+        this.leftFlipperBox.userData.obb.copy(this.leftFlipperBox.geometry.userData.obb);
+        this.leftFlipperBox.updateMatrixWorld(true);
+        this.leftFlipperBox.userData.obb.applyMatrix4(this.leftFlipperBox.matrixWorld);
+        console.log(this.leftFlipperBox.matrixWorld);
         this.updatePhysics(deltaTime);
 
         this.renderer.render(this.scene, this.camera);
@@ -338,28 +302,57 @@ class PinballGame{
 }
 
 function createOBB(mesh) {
+    // Create a new OBB based on the mesh's geometry
     const obb = new OBB();
+    
+    // Get the mesh's geometry
     const geometry = mesh.geometry;
-    geometry.computeBoundingBox();
-    const boundingBox = geometry.boundingBox;
-    const center = new THREE.Vector3();
-    boundingBox.getCenter(center);
-    const halfsize = new THREE.Vector3();
-    boundingBox.getSize(halfsize).multiplyScalar(0.5);
-    const rotation = new THREE.Matrix3().setFromMatrix4(mesh.matrixWorld);
-    obb.set(center, halfsize, rotation);
-    obb.applyMatrix4(mesh.matrixWorld);
-    console.log(obb);
+    
+    // We need the vertices to compute the OBB
+    const vertices = [];
+    const positionAttribute = geometry.getAttribute('position');
+    
+    // Extract vertices from the geometry
+    for (let i = 0; i < positionAttribute.count; i++) {
+        const vertex = new THREE.Vector3();
+        vertex.fromBufferAttribute(positionAttribute, i);
+        vertices.push(vertex);
+    }
+    
+    // Set the OBB from points
+    obb.fromPoints(vertices);
+    
+    // Update the OBB to match the mesh's current position, rotation, and scale
+    updateOBB(mesh, obb);
+    
     return obb;
 }
 
 function updateOBB(mesh, obb) {
-    const geometry = mesh.geometry;
-    if (!geometry.boundingBox) {
-        geometry.computeBoundingBox();
-    }
-    mesh.updateMatrixWorld(true);
-    obb.applyMatrix4(mesh.matrixWorld);
+    // We need to transform the OBB to match the mesh's world transformation
+    
+    // Clone mesh's world matrix
+    const worldMatrix = mesh.matrixWorld.clone();
+    
+    // Extract position, rotation, and scale from the world matrix
+    const position = new THREE.Vector3();
+    const quaternion = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    worldMatrix.decompose(position, quaternion, scale);
+    
+    // Apply rotation to the OBB
+    obb.rotation.copy(quaternion);
+    
+    // Apply position to the OBB
+    obb.center.copy(position);
+    
+    // Apply scale to the OBB (if needed)
+    // This depends on how your OBB implementation handles scale
+    obb.halfSize.x *= scale.x;
+    obb.halfSize.y *= scale.y;
+    obb.halfSize.z *= scale.z;
+    
+    return obb;
   }
 
 // Initialize the game
