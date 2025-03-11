@@ -354,34 +354,6 @@ function updateOBB(mesh, obb) {
     obb.applyMatrix4(mesh.matrixWorld);
   }
 
-class BoardShader {
-    vertexShader() {
-        return `
-        uniform sampler2D uTexture;
-        varying vec2 vUv;
-        varying vec3 vPosition;
-        void main() {
-            vUv = uv;
-            vPosition = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-        `;
-    }
-
-    fragmentShader() {
-        return `
-        uniform sampler2D uTexture;
-        varying vec2 vUv;
-        varying vec3 vPosition;
-        void main() {    
-            vec2 newUv = vUv * 10.0;
-            vec4 tex_color = texture2D(uTexture, newUv);
-            gl_FragColor = tex_color;
-        }
-        `;
-    }
-}
-
 // Initialize the game
 window.addEventListener('DOMContentLoaded', () => {
     const game = new PinballGame();
