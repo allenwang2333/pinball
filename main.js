@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -24,6 +23,21 @@ let rightFlipperAxis = new THREE.Vector4(0, 0, 0, 1);
 let curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
 const INITIAL_RIGHT_FLIPPER_POSITION = new THREE.Vector3();
 let isRightFlipper = false;
+
+// Objects for collision detection
+let bumpers = [];
+let walls = [];
+let speedBumps = [];
+
+// AABB helper functions
+function createAABB(object) {
+    const box = new THREE.Box3().setFromObject(object);
+    return box;
+}
+
+function checkAABBCollision(box1, box2) {
+    return box1.intersectsBox(box2);
+}
 
 class BoardShader {
     vertexShader() {
@@ -62,11 +76,9 @@ function init() {
     document.body.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement);
 
-    controls = new OrbitControls(camera, renderer.domElement);
-
-
     const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper)
+    scene.add(axesHelper);
+    
     // Lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
@@ -76,10 +88,8 @@ function init() {
 
     // Camera position
     camera.position.set(0, 30, 15);
-    camera.position.set(0, 30, 15);
     camera.lookAt(0, 0, 0);
 
-    createPlayField();
     createPlayField();
     createFlippers();
     createBumpers();
@@ -151,25 +161,20 @@ function createPlayField() {
     const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
     leftWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     leftWall.position.set(-10, 0, 0);
-    
-    
     scene.add(leftWall);
+    walls.push(leftWall);
 
     const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
     rightWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     rightWall.position.set(10, 0, 0);
     scene.add(rightWall);
+    walls.push(rightWall);
 
     const topWall = new THREE.Mesh(new THREE.BoxGeometry(20, 2, 1), wallMaterial);
-    
-
     topWall.position.set(0, 0, -14.5);
     topWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     scene.add(topWall);
-
-    // const backWall = new THREE.Mesh(new THREE.BoxGeometry(15, 2, 1), wallMaterial);
-    // backWall.position.set(0, 1, 15.5);
-    // scene.add(backWall);
+    walls.push(topWall);
 }
 
 function createFlippers() {
@@ -185,12 +190,10 @@ function createFlippers() {
     INITIAL_LEFT_FLIPPER_POSITION.set(initLeft.x, initLeft.y, initLeft.z);
     scene.add(leftFlipper);
     
-
     leftFlipperAxis.set(initLeft.x-2.5, initLeft.y, initLeft.z, 1);
     leftFlipperAxis.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     
     resetLeftFlipper();
-
 
     // Right flipper
     rightFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
@@ -215,19 +218,20 @@ function createBumpers() {
     const bumper1 = new THREE.Mesh(bumperGeometry, bumperMaterial);
     bumper1.position.set(0, 0.5, -5);
     bumper1.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
-    
+    scene.add(bumper1);
+    bumpers.push(bumper1);
 
     const bumper2 = new THREE.Mesh(bumperGeometry, bumperMaterial);
     bumper2.position.set(-3, 0.5, -8);
     bumper2.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
+    scene.add(bumper2);
+    bumpers.push(bumper2);
 
     const bumper3 = new THREE.Mesh(bumperGeometry, bumperMaterial);
     bumper3.position.set(3, 0.5, -8);
     bumper3.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
-
-    scene.add(bumper1);
-    scene.add(bumper2);
     scene.add(bumper3);
+    bumpers.push(bumper3);
 }
 
 function createSpeedBump() {
@@ -246,6 +250,9 @@ function createSpeedBump() {
     
     scene.add(speedBump1);
     scene.add(speedBump2);
+    
+    speedBumps.push(speedBump1);
+    speedBumps.push(speedBump2);
 }
 
 function createBall() {
@@ -254,50 +261,29 @@ function createBall() {
     ball = new THREE.Mesh(ballGeometry, ballMaterial);
     ball.position.set(0, 5, 0);
     scene.add(ball);
-
-
 }
 
 function handleKeyDown(event) {
-    if (event.key === 'z') {
-        leftFlipperAngle = Math.max(leftFlipperAngle - FLIPPER_SPEED, MAX_FLIPER_ANGLE);
-        isLeftFlipper = true;
-    }
-    else if (event.key === 'Z') {
+    if (event.key === 'z' || event.key === 'Z') {
         leftFlipperAngle = Math.max(leftFlipperAngle - FLIPPER_SPEED, MAX_FLIPER_ANGLE);
         isLeftFlipper = true;
     }
 
-    if (event.key === '/') {
-        rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, MAX_FLIPER_ANGLE);
-        isRightFlipper = true;
-    }
-    else if (event.key === '?') {
+    if (event.key === '/' || event.key === '?') {
         rightFlipperAngle = Math.min(rightFlipperAngle + FLIPPER_SPEED, MAX_FLIPER_ANGLE);
         isRightFlipper = true;
     }
 }
 
 function handleKeyUp(event) {
-    if (event.key === 'z') {
-        leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-        curLeftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-        resetLeftFlipper();
-        isLeftFlipper = false;
-    } 
-    if (event.key === 'Z') {
+    if (event.key === 'z' || event.key === 'Z') {
         leftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
         curLeftFlipperAngle = FLIPPER_DEFAULT_ANGLE;
         resetLeftFlipper();
         isLeftFlipper = false;
     }
-    if (event.key === '?') {
-        rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-        curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
-        resetRightFlipper();
-        isRightFlipper = false;
-    }
-    if (event.key === '/') {
+    
+    if (event.key === '/' || event.key === '?') {
         rightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
         curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
         resetRightFlipper();
@@ -306,51 +292,103 @@ function handleKeyUp(event) {
 }
 
 function updatePhysics() {
-
+    // Apply gravity
     ballVelocity.y += GRAVITY;
-
-    ballVelocity.y += GRAVITY;
+    
+    // Store previous position for collision resolution
+    const previousPosition = ball.position.clone();
+    
+    // Update position based on velocity
     ball.position.add(ballVelocity);
-
-    // Table collision (ground)
-    if (ball.position.y < 0.5) {
-    }
-    // Table collision (ground)
+    
+    // Create AABB for the ball
+    const ballAABB = createAABB(ball);
+    
+    // Ground collision (table surface)
     if (ball.position.y < 0.5) {
         ball.position.y = 0.5;
         ballVelocity.y = -ballVelocity.y * BOUNCE_FACTOR;
     }
-
-    // Wall collisions
-    if (ball.position.x < -9.5) { // Left wall
-        ball.position.x = -9.5;
-        ballVelocity.x = -ballVelocity.x * BOUNCE_FACTOR;
+    
+    // Wall collisions using AABB
+    for (let wall of walls) {
+        const wallAABB = createAABB(wall);
+        if (checkAABBCollision(ballAABB, wallAABB)) {
+            // Determine which side of the wall was hit
+            const wallCenter = new THREE.Vector3();
+            wallAABB.getCenter(wallCenter);
+            const direction = ball.position.clone().sub(wallCenter).normalize();
+            
+            if (Math.abs(direction.z) > Math.abs(direction.x)) {
+                ballVelocity.z = -ballVelocity.z * BOUNCE_FACTOR;
+                if (direction.z > 0) {
+                    ball.position.z = wallAABB.max.z + 0.5;
+                } else {
+                    ball.position.z = wallAABB.min.z - 0.5;
+                }
+            } 
+            else {
+                ballVelocity.x = -ballVelocity.x * BOUNCE_FACTOR;
+                if (direction.x > 0) {
+                    ball.position.x = wallAABB.max.x + 0.5;
+                } else {
+                    ball.position.x = wallAABB.min.x - 0.5;
+                }
+            }
+        }
     }
-    if (ball.position.x > 9.5) { // Right wall
-        ball.position.x = 9.5;
-        ballVelocity.x = -ballVelocity.x * BOUNCE_FACTOR;
+    
+    // Bumper collisions using AABB
+    for (let bumper of bumpers) {
+        const bumperAABB = createAABB(bumper);
+        if (checkAABBCollision(ballAABB, bumperAABB)) {
+            // Calculate reflection vector
+            const bumperCenter = new THREE.Vector3();
+            bumperAABB.getCenter(bumperCenter);
+            
+            // Direction from bumper to ball
+            const normal = ball.position.clone().sub(bumperCenter).normalize();
+            
+            // Apply impulse in the normal direction (bouncing away from bumper)
+            const impulseStrength = 0.2; // Adjust for desired bounce effect
+            ballVelocity.x = normal.x * impulseStrength;
+            ballVelocity.z = normal.z * impulseStrength;
+            ballVelocity.y += 0.1; // Add upward impulse
+            
+            // Add score or effects here
+        }
     }
-    if (ball.position.z > 14.5) { // Top wall
-        ball.position.z = 14.5;
-        ballVelocity.z = -ballVelocity.z * BOUNCE_FACTOR;
+    
+    // Flipper collisions using AABB
+    const leftFlipperAABB = createAABB(leftFlipper);
+    if (checkAABBCollision(ballAABB, leftFlipperAABB) && isLeftFlipper) {
+        ballVelocity.y = 0.3;
+        ballVelocity.x = -0.15;
+        ballVelocity.z = -0.2;
     }
-
-    // Flipper collisions (simplified)
-    const ballBox = new THREE.Box3().setFromObject(ball);
-    const leftFlipperBox = new THREE.Box3().setFromObject(leftFlipper);
-    const rightFlipperBox = new THREE.Box3().setFromObject(rightFlipper);
-
-    if (ballBox.intersectsBox(leftFlipperBox) && leftFlipperAngle > 0) {
-        ballVelocity.y = 0.5; // Push ball up
-        ballVelocity.x = -0.2; // Slight left nudge
+    
+    const rightFlipperAABB = createAABB(rightFlipper);
+    if (checkAABBCollision(ballAABB, rightFlipperAABB) && isRightFlipper) {
+        ballVelocity.y = 0.3;
+        ballVelocity.x = 0.15;
+        ballVelocity.z = -0.2;
     }
-    if (ballBox.intersectsBox(rightFlipperBox) && rightFlipperAngle > 0) {
-        ballVelocity.y = 0.5; // Push ball up
-        ballVelocity.x = 0.2; // Slight right nudge
+    
+    // Speed bump collisions
+    for (let speedBump of speedBumps) {
+        const speedBumpAABB = createAABB(speedBump);
+        if (checkAABBCollision(ballAABB, speedBumpAABB)) {
+            ballVelocity.y += 0.05;
+            ballVelocity.z -= 0.1;
+        }
     }
-
-    // Reset ball if it falls off bottom (simulating out-of-bounds)
-    if (ball.position.z < -15) {
+    
+    // Apply velocity dampening (friction)
+    ballVelocity.x *= 0.99;
+    ballVelocity.z *= 0.99;
+    
+    // Reset ball if it falls off bottom
+    if (ball.position.z > 15) {
         ball.position.set(0, 5, 0);
         ballVelocity.set(0, 0, 0);
     }
