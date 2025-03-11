@@ -49,6 +49,11 @@ class PinballGame{
             difficulty: 1
         }
         this.gui = new GUI();
+
+        this.animate = this.animate.bind(this);
+        this.handleKeyDown = this.handleKeyDown.bind(this);
+        this.handleKeyUp = this.handleKeyUp.bind(this);
+        this.onWindowResize = this.onWindowResize.bind(this);
         this.init();
     }
 
@@ -189,6 +194,7 @@ class PinballGame{
         switch (event.key) {
             case 'z':
             case 'Z':
+                console.log("left active");
                 this.isLeftActive = true;
                 break;
             case '/':
@@ -215,6 +221,7 @@ class PinballGame{
 
     updateFlippers(delta){
         if (this.isLeftActive) {
+            // console.log("left active");
             this.leftFlipper.rotation.z = Math.min(this.leftFlipper.rotation.z + FLIPPER_CONS.speed * delta, FLIPPER_CONS.max_angle);
         }
         else {
@@ -323,11 +330,35 @@ class PinballGame{
         this.lastTime = currentTime;
         this.updateFlippers(deltaTime);    
         this.updatePhysics(deltaTime);
+
         this.renderer.render(this.scene, this.camera);
         this.stats.update();
     }
 
 }
+
+let scene, camera, renderer, ball;
+let playField = new THREE.Group();
+let leftFlipper, leftFlipperBox, rightFlipper, rightFlipperBox;
+let ballVelocity = new THREE.Vector3(0, 0, 0);
+let controls;
+let gui, stats;
+let settings = {
+    difficulty: 1
+}
+
+let isLeftActive = false;
+let isRightActive = false;
+
+let lastTime = 0;
+const clock = new THREE.Clock();
+
+const BOUNCE_FACTOR = 0.8;
+
+// Objects for collision detection
+let bumpers = [];
+let walls = [];
+let speedBumps = [];
 
 function createOBB(mesh) {
     const obb = new OBB();
@@ -358,3 +389,9 @@ function updateOBB(mesh, obb) {
 window.addEventListener('DOMContentLoaded', () => {
     const game = new PinballGame();
 });
+
+// init();
+// animate();
+
+// Handle window resize
+// window.addEventListener('resize', onWindowResize, false);
