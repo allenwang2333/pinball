@@ -124,14 +124,14 @@ class PinballGame{
         this.leftFlipper = new THREE.Group();
         this.leftFlipper.add(this.leftFlipperBox);
         this.leftFlipperBox.position.set(FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.wallDepth+FLIPPER_CONS.depth)/2);
+        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
         this.leftFlipper.rotation.z = -FLIPPER_CONS.init_angle;
         this.playField.add(this.leftFlipper);
         this.rightFlipperBox = new THREE.Mesh(flipperGeometry, flipperMaterial);
         this.rightFlipper = new THREE.Group();
         this.rightFlipper.add(this.rightFlipperBox);
         this.rightFlipperBox.position.set(-FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.wallDepth+FLIPPER_CONS.depth)/2);
+        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
         this.rightFlipper.rotation.z = FLIPPER_CONS.init_angle;
         this.playField.add(this.rightFlipper);
     }
