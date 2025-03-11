@@ -47,3 +47,7 @@ export const BALL_CONS = {
 export const PLAY_FIELD_CONS = {
     tilt_angle: Math.PI / 6,
 };
+
+export const META = {
+    bounce_factor: 0.8,
+}
