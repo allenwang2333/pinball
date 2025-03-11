@@ -1,10 +1,18 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
+import Stats from 'three/addons/libs/stats.module.js';
 
 let scene, camera, renderer, ball;
 let leftFlipper, rightFlipper;
 let ballVelocity = new THREE.Vector3(0, 0, 0);
 let controls;
+let gui, stats;
+let settings = {
+    difficulty: 1
+}
+
 const GRAVITY = -0.001;
 const FLIPPER_SPEED = Math.PI/18;
 const FLIPPER_DEFAULT_ANGLE = -Math.PI/4;
@@ -76,6 +84,9 @@ function init() {
     document.body.appendChild(renderer.domElement);
     controls = new OrbitControls(camera, renderer.domElement);
 
+    stats = new Stats();
+    document.body.appendChild( stats.dom );
+
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper);
     
@@ -95,10 +106,24 @@ function init() {
     createBumpers();
     createSpeedBump();
     createBall();
+    createButtons();
 
     // Event listeners
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+}
+
+function createButtons() {
+    gui = new GUI();
+    const folder = gui.addFolder('Game Settings');
+    folder.add(settings, 'difficulty', 1, 5).onChange((value) => {
+        settings.difficulty = value;
+        console.log('Difficulty set to: ', value);
+    });
+
+    folder.open();
+
+
 }
 
 function rotationMatrixX(angle) {
@@ -459,6 +484,7 @@ function animate() {
     
     updatePhysics();
     renderer.render(scene, camera);
+    stats.update();
 }
 
 init();
