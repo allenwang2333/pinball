@@ -337,29 +337,6 @@ class PinballGame{
 
 }
 
-let scene, camera, renderer, ball;
-let playField = new THREE.Group();
-let leftFlipper, leftFlipperBox, rightFlipper, rightFlipperBox;
-let ballVelocity = new THREE.Vector3(0, 0, 0);
-let controls;
-let gui, stats;
-let settings = {
-    difficulty: 1
-}
-
-let isLeftActive = false;
-let isRightActive = false;
-
-let lastTime = 0;
-const clock = new THREE.Clock();
-
-const BOUNCE_FACTOR = 0.8;
-
-// Objects for collision detection
-let bumpers = [];
-let walls = [];
-let speedBumps = [];
-
 function createOBB(mesh) {
     const obb = new OBB();
     const geometry = mesh.geometry;
@@ -389,9 +366,3 @@ function updateOBB(mesh, obb) {
 window.addEventListener('DOMContentLoaded', () => {
     const game = new PinballGame();
 });
-
-// init();
-// animate();
-
-// Handle window resize
-// window.addEventListener('resize', onWindowResize, false);
