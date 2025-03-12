@@ -12,11 +12,12 @@ import {
     BALL_CONS,
     PLAY_FIELD_CONS,
     LAUNCHER_CONS,
+    VISUALIZE_BOUNDING_BOX,
 } from './constants';
 
 let temp;
 
-class PinballGame{
+class PinballGame {
     constructor(){
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -84,7 +85,7 @@ class PinballGame{
         this.handleKeyUp = this.handleKeyUp.bind(this);
         this.onWindowResize = this.onWindowResize.bind(this);
         this.updatePhysics = this.updatePhysics.bind(this);
-        this.checkCollision = this.checkCollision.bind(this);
+        this.handleCollision = this.handleCollision.bind(this);
         this.init();
     }
 
@@ -102,6 +103,9 @@ class PinballGame{
         document.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('resize', this.onWindowResize, false);
         this.animate();
+
+
+        this.isLaunched = false;
     }
 
     createTable(){
@@ -385,45 +389,60 @@ class PinballGame{
     }
 
     updatePhysics(delta){
-        this.checkCollision(delta);
+        this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
+        this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
     }
 
-    checkCollision(delta) {
-        if (!temp) {
-            //temp = this.launchStick.userData.obb;
-            this.ball.obb = createOBBFromObject(this.ball);
-            this.launchStick.obb = createOBBFromObject(this.launchStick);
-            if(this.ball.obb.intersectsOBB(this.launchStick.obb)) {
-                this.ballVelocity.add(this.gravity.clone().multiplyScalar(-delta));
-                this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
-            } else {
-                this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
-                this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+    handleCollision(deltaTime) {
+        this.ball.obb = createOBBFromObject(this.ball);
+        this.handleLauncherCollision(deltaTime);
+        this.handleFlipperCollision(deltaTime);
+        this.handleBumperCollision(deltaTime);
+        this.handleWallCollision(deltaTime);
+    }
+
+    handleLauncherCollision(deltaTime){
+        this.launchStick.obb = createOBBFromObject(this.launchStick);
+        if (this.ball.obb.intersectsOBB(this.launchStick.obb)) {
+            this.isLaunched = this.isLauncher;
+            if (this.isLauncher) { 
+                this.ballVelocity.add(this.gravity.clone().multiplyScalar(deltaTime));
+            }
+            this.ballVelocity.add(new THREE.Vector3(-0.15, 20, 0));
+            this.isLaunched = true;
+        }
+    }
+    
+    handleFlipperCollision(deltaTime){
+
+        this.leftFlipperBox.obb = createOBBFromObject(this.leftFlipperBox);
+        if (this.ball.obb.intersectsOBB(this.leftFlipperBox.obb)) {
+            //TODO: handle collision logic
+        }
+        
+        this.rightFlipperBox.obb = createOBBFromObject(this.rightFlipperBox);
+        if (this.ball.obb.intersectsOBB(this.rightFlipperBox.obb)) {
+            //TODO: handle collision logic
+        }
+        
+    }
+
+    handleWallCollision(deltaTime){
+        for (let wall of this.walls) {
+            wall.obb = createOBBFromObject(wall);
+            if (this.ball.obb.intersectsOBB(wall.obb)) {
+                // TODO handle wall collision logic
             }
         }
-        else {
-            if (temp.center !== this.leftFlipperBox.userData.obb.center) {
-                console.log('center changed');
+    }
+
+    handleBumperCollision(deltaTime){
+        for (let bumper of this.bumpers) {
+            bumper.obb = createOBBFromObject(bumper);
+            if (this.ball.obb.intersectsOBB(bumper.obb)) {
+                // TODO handle bumper collision logic
             }
         }
-        // console.log(this.leftFlipperBox.userData.obb);
-        // console.log(this.leftFlipperBox.userData.obb.intersectsOBB(this.leftFlipperBox.userData.obb));
-    }
-
-    handleWallCollision(){
-        // todo
-    }
-
-    handleBumperCollision(){
-        // todo
-    }
-
-    handleSpeedBumpCollision(){
-        // todo
-    }
-
-    handleFlipperCollision(flipper){
-        // todo
     }
 
     onWindowResize(){
@@ -441,19 +460,16 @@ class PinballGame{
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
         this.resetGame();    
-        this.leftFlipperBox.userData.obb.copy(this.leftFlipperBox.geometry.userData.obb);
-        this.leftFlipperBox.updateMatrixWorld(true);
-        this.leftFlipperBox.userData.obb.applyMatrix4(this.leftFlipperBox.matrixWorld);
-        //console.log(this.leftFlipperBox.userData.obb);
+
         this.updatePhysics(deltaTime);
+        this.handleCollision(deltaTime);
 
         // Update Phong shading matterial
         updateMaterial(this.ball, this.scene, this.camera);
-
+    
         this.renderer.render(this.scene, this.camera);
         this.stats.update();
     }
-
 }
 
 function createOBB(mesh) {
@@ -515,7 +531,11 @@ function createOBBFromObject(object) {
     object.geometry.computeBoundingBox();
     
     const bbox = object.geometry.boundingBox;
-    console.log(bbox);
+    if (VISUALIZE_BOUNDING_BOX) {
+        let bboxviz = new THREE.Box3Helper(bbox, 0xffff00);
+        object.add(bboxviz);
+    }
+    
     
     const center = new THREE.Vector3();
     const size = new THREE.Vector3();

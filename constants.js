@@ -71,3 +71,5 @@ export const LAUNCHER_CONS = {
 export const BOTTOM_BARRIER = {
 
 };
+
+export const VISUALIZE_BOUNDING_BOX = true;
