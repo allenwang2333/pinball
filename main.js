@@ -71,7 +71,7 @@ class PinballGame {
 
         this.isLeftActive = false;
         this.isRightActive = false;
-        this.isLauncher = false;
+        this.holdingLauncher = false;
         this.reset = false;
         this.lastTime = 0;
         this.clock = new THREE.Clock();
@@ -86,7 +86,12 @@ class PinballGame {
         this.onWindowResize = this.onWindowResize.bind(this);
         this.updatePhysics = this.updatePhysics.bind(this);
         this.handleCollision = this.handleCollision.bind(this);
+
+        this.isAttachedToLauncher = false;
+        this.isLaunched = false;
+        this.previousHoldingLauncher = false;
         this.init();
+        
     }
 
     init(){
@@ -103,9 +108,8 @@ class PinballGame {
         document.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('resize', this.onWindowResize, false);
         this.animate();
-
-
-        this.isLaunched = false;
+    
+        
     }
 
     createTable(){
@@ -330,7 +334,7 @@ class PinballGame {
                 this.isRightActive = true;
                 break;
             case ' ':
-                this.isLauncher = true;
+                this.holdingLauncher = true;
                 break;
             case 'R':
             case 'r':
@@ -350,7 +354,7 @@ class PinballGame {
                 this.isRightActive = false;
                 break;
             case ' ':
-                this.isLauncher = false;
+                this.holdingLauncher = false;
                 break;
             case 'R':
             case 'r':
@@ -375,7 +379,7 @@ class PinballGame {
     }
 
     updateLauncher(delta){
-        if (this.isLauncher) {
+        if (this.holdingLauncher) {
             this.launchStick.position.y = Math.max(this.launchStick.position.y - LAUNCHER_CONS.holding_speed * delta, LAUNCHER_CONS.stick_lowest);
         } else {
             this.launchStick.position.y = Math.min(this.launchStick.position.y + LAUNCHER_CONS.releasing_speed * delta, LAUNCHER_CONS.init_y)
@@ -389,8 +393,10 @@ class PinballGame {
     }
 
     updatePhysics(delta){
-        this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
-        this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+        if (this.isLaunched) {
+            this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
+            this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+        }
     }
 
     handleCollision(deltaTime) {
@@ -402,15 +408,34 @@ class PinballGame {
     }
 
     handleLauncherCollision(deltaTime){
+
         this.launchStick.obb = createOBBFromObject(this.launchStick);
-        if (this.ball.obb.intersectsOBB(this.launchStick.obb)) {
-            this.isLaunched = this.isLauncher;
-            if (this.isLauncher) { 
-                this.ballVelocity.add(this.gravity.clone().multiplyScalar(deltaTime));
+        if (this.ball.obb.intersectsOBB(this.launchStick.obb)) { 
+            //console.log('Ball hit the launcher');
+            // something wrong with relaunching
+            // if (this.isLaunched && !this.holdingLauncher) {
+            //     this.isLaunched = false;
+            //     this.isAttachedToLauncher = true;
+            //     this.ballVelocity.set(0, 0, 0);
+            // }
+            if (!this.isLaunched &&!this.holdingLauncher) {
+                this.isAttachedToLauncher = true;
+                this.ballVelocity.set(0, 0, 0);
             }
-            this.ballVelocity.add(new THREE.Vector3(-0.15, 20, 0));
-            this.isLaunched = true;
+            if (this.holdingLauncher && this.isAttachedToLauncher) {
+                this.previousHoldingLauncher = this.holdingLauncher;
+                this.ball.position.y -= (LAUNCHER_CONS.holding_speed * deltaTime);
+            }
         }
+        if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
+            const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
+            this.ballVelocity.set(0, launchPower, 0); 
+            //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
+
+            this.isLaunched = true;
+            this.isAttachedToLauncher = false;
+         }  
+        
     }
     
     handleFlipperCollision(deltaTime){
@@ -457,12 +482,23 @@ class PinballGame {
         const currentTime = this.clock.getElapsedTime();
         const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
+        let substep = 10;
+        let dt = deltaTime / substep;
+        //for (let i = 0; i < substep; i++) {
+            // this.updateFlippers(dt);
+            // this.updateLauncher(dt);
+            // this.handleCollision(dt);
+            // this.updatePhysics(dt);
+        //}
+
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
+        this.handleCollision(deltaTime);
+        this.updatePhysics(deltaTime );
+        
         this.resetGame();    
 
-        this.updatePhysics(deltaTime);
-        this.handleCollision(deltaTime);
+        
 
         // Update Phong shading matterial
         updateMaterial(this.ball, this.scene, this.camera);
@@ -470,60 +506,6 @@ class PinballGame {
         this.renderer.render(this.scene, this.camera);
         this.stats.update();
     }
-}
-
-function createOBB(mesh) {
-    // Create a new OBB based on the mesh's geometry
-    const obb = new OBB();
-    
-    // Get the mesh's geometry
-    const geometry = mesh.geometry;
-    
-    // We need the vertices to compute the OBB
-    const vertices = [];
-    const positionAttribute = geometry.getAttribute('position');
-    
-    // Extract vertices from the geometry
-    for (let i = 0; i < positionAttribute.count; i++) {
-        const vertex = new THREE.Vector3();
-        vertex.fromBufferAttribute(positionAttribute, i);
-        vertices.push(vertex);
-    }
-    
-    // Set the OBB from points
-    obb.fromPoints(vertices);
-    
-    // Update the OBB to match the mesh's current position, rotation, and scale
-    updateOBB(mesh, obb);
-    
-    return obb;
-}
-
-function updateOBB(mesh, obb) {
-    // We need to transform the OBB to match the mesh's world transformation
-    
-    // Clone mesh's world matrix
-    const worldMatrix = mesh.matrixWorld.clone();
-    
-    // Extract position, rotation, and scale from the world matrix
-    const position = new THREE.Vector3();
-    const quaternion = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-    worldMatrix.decompose(position, quaternion, scale);
-    
-    // Apply rotation to the OBB
-    obb.rotation.copy(quaternion);
-    
-    // Apply position to the OBB
-    obb.center.copy(position);
-    
-    // Apply scale to the OBB (if needed)
-    // This depends on how your OBB implementation handles scale
-    obb.halfSize.x *= scale.x;
-    obb.halfSize.y *= scale.y;
-    obb.halfSize.z *= scale.z;
-    
-    return obb;
 }
 
 function createOBBFromObject(object) {
