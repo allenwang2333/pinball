@@ -25,6 +25,10 @@ let curRightFlipperAngle = FLIPPER_DEFAULT_ANGLE;
 const INITIAL_RIGHT_FLIPPER_POSITION = new THREE.Vector3();
 let isRightFlipper = false;
 
+class BallShader {
+    
+}
+
 class BoardShader {
     vertexShader() {
         return `
@@ -69,10 +73,22 @@ function init() {
     scene.add(axesHelper)
     // Lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(0, 10, 0);
+    directionalLight.position.set(0, 50, 70);
+    
+
+    // Shadow
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    directionalLight.castShadow = true;
+    ambientLight.castShadow = true;
+    scene.add(ambientLight);
     scene.add(directionalLight);
+
+    directionalLight.shadow.mapSize.width = 2048; 
+    directionalLight.shadow.mapSize.height = 2048; 
+    directionalLight.shadow.camera.near = 0.1; 
+    directionalLight.shadow.camera.far = 500; 
 
     // Camera position
     camera.position.set(0, 30, 15);
@@ -138,6 +154,10 @@ function createPlayField() {
     const tableMaterial = new THREE.MeshPhongMaterial( {map: tableTexture } );
 
     const table = new THREE.Mesh(tableGeometry, tableMaterial);
+    // Shadow
+    table.castShadow = true;
+    table.receiveShadow = true;
+
     table.applyMatrix4(rotationMatrixX(-DEFAULT_TILT));
     scene.add(table);
 
@@ -149,6 +169,9 @@ function createPlayField() {
     const wallMaterial = new THREE.MeshPhongMaterial({ map: wallTexture });
 
     const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    // Shadow
+    leftWall.castShadow = true;
+    leftWall.receiveShadow = true;
     leftWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     leftWall.position.set(-10, 0, 0);
     
@@ -156,12 +179,17 @@ function createPlayField() {
     scene.add(leftWall);
 
     const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+    // Shadow
+    rightWall.castShadow = true;
+    rightWall.receiveShadow = true;
     rightWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
     rightWall.position.set(10, 0, 0);
     scene.add(rightWall);
 
     const topWall = new THREE.Mesh(new THREE.BoxGeometry(20, 2, 1), wallMaterial);
-    
+    // Shadow
+    topWall.castShadow = true;
+    topWall.receiveShadow = true;
 
     topWall.position.set(0, 0, -14.5);
     topWall.applyMatrix4(rotationMatrixX(Math.PI/2 - DEFAULT_TILT));
@@ -178,6 +206,10 @@ function createFlippers() {
     
     // Left flipper
     leftFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
+    // Shadow
+    leftFlipper.castShadow = true;
+    leftFlipper.receiveShadow = true;
+
     leftFlipper.position.set(-4, 0.25, 8);
     leftFlipper.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
     
@@ -194,6 +226,10 @@ function createFlippers() {
 
     // Right flipper
     rightFlipper = new THREE.Mesh(flipperGeometry, flipperMaterial);
+    // Shadow
+    rightFlipper.castShadow = true;
+    rightFlipper.receiveShadow = true;
+
     rightFlipper.position.set(4, 0.25, 8);
     rightFlipper.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
 
@@ -213,15 +249,27 @@ function createBumpers() {
     
     // Create bumpers
     const bumper1 = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    // Shadow
+    bumper1.castShadow = true;
+    bumper1.receiveShadow = true;
+
     bumper1.position.set(0, 0.5, -5);
     bumper1.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
     
 
     const bumper2 = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    // Shadow
+    bumper2.castShadow = true;
+    bumper2.receiveShadow = true;
+
     bumper2.position.set(-3, 0.5, -8);
     bumper2.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
 
     const bumper3 = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    // Shadow
+    bumper3.castShadow = true;
+    bumper3.receiveShadow = true;
+
     bumper3.position.set(3, 0.5, -8);
     bumper3.applyMatrix4(rotationMatrixX((Math.PI/2 - DEFAULT_TILT)));
 
@@ -252,6 +300,9 @@ function createBall() {
     const ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
     const ballMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
     ball = new THREE.Mesh(ballGeometry, ballMaterial);
+    // Shadow
+    ball.castShadow = true;
+    ball.receiveShadow = true;
     ball.position.set(0, 5, 0);
     scene.add(ball);
 
