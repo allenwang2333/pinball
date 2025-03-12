@@ -281,7 +281,7 @@ class PinballGame{
         this.launchStick.castShadow = true;
         this.launchStick.receiveShadow = true;
 
-        this.launchStick.position.set(this.ball.position.x, LAUNCHER_CONS.init_y, this.ball.position.z);
+        this.launchStick.position.set(BALL_CONS.init_x, LAUNCHER_CONS.init_y, BALL_CONS.init_z);
         this.playField.add(this.launchStick);
 
         // Launcher barriers
@@ -385,14 +385,21 @@ class PinballGame{
     }
 
     updatePhysics(delta){
-        this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
-        this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
-        this.checkCollision();
+        this.checkCollision(delta);
     }
 
-    checkCollision() {
+    checkCollision(delta) {
         if (!temp) {
-            temp = this.leftFlipperBox.userData.obb;
+            //temp = this.launchStick.userData.obb;
+            this.ball.obb = createOBBFromObject(this.ball);
+            this.launchStick.obb = createOBBFromObject(this.launchStick);
+            if(this.ball.obb.intersectsOBB(this.launchStick.obb)) {
+                this.ballVelocity.add(this.gravity.clone().multiplyScalar(-delta));
+                this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+            } else {
+                this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
+                this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+            }
         }
         else {
             if (temp.center !== this.leftFlipperBox.userData.obb.center) {
@@ -437,8 +444,8 @@ class PinballGame{
         this.leftFlipperBox.userData.obb.copy(this.leftFlipperBox.geometry.userData.obb);
         this.leftFlipperBox.updateMatrixWorld(true);
         this.leftFlipperBox.userData.obb.applyMatrix4(this.leftFlipperBox.matrixWorld);
-        //console.log(this.leftFlipperBox.matrixWorld);
-        //this.updatePhysics(deltaTime);
+        //console.log(this.leftFlipperBox.userData.obb);
+        this.updatePhysics(deltaTime);
 
         // Update Phong shading matterial
         updateMaterial(this.ball, this.scene, this.camera);
@@ -500,6 +507,22 @@ function updateOBB(mesh, obb) {
     obb.halfSize.y *= scale.y;
     obb.halfSize.z *= scale.z;
     
+    return obb;
+}
+
+function createOBBFromObject(object) {
+    object.updateMatrixWorld(true);
+    object.geometry.computeBoundingBox();
+    
+    const bbox = object.geometry.boundingBox;
+    console.log(bbox);
+    
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    bbox.getCenter(center);
+    bbox.getSize(size);
+
+    const obb = new OBB(center, size.multiplyScalar(0.5)).applyMatrix4(object.matrixWorld);
     return obb;
 }
 
