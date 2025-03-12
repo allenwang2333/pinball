@@ -11,6 +11,7 @@ import {
     SPEED_BUMPER_CONS, 
     BALL_CONS,
     PLAY_FIELD_CONS,
+    LAUNCHER_CONS,
 } from './constants';
 
 let temp;
@@ -35,7 +36,6 @@ class PinballGame{
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         directionalLight.castShadow = true;
-        ambientLight.castShadow = true;
 
         // Set directional light shadow rendering area
         //directionalLight.shadow.bias = -0.001;
@@ -64,8 +64,14 @@ class PinballGame{
         this.bumpers = [];
         this.walls = [];
         this.speedBumps = [];
+        // Launcher
+        this.launchStick = null;
+        this.launchBarrier = [];
+
         this.isLeftActive = false;
         this.isRightActive = false;
+        this.isLauncher = false;
+        this.reset = false;
         this.lastTime = 0;
         this.clock = new THREE.Clock();
         this.settings = {
@@ -88,6 +94,7 @@ class PinballGame{
         this.createBumpers();
         this.createSpeedBump();
         this.createBall();
+        this.createLauncher();
         this.createButtons();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
@@ -257,8 +264,46 @@ class PinballGame{
         this.ball.receiveShadow = true;
         this.ball.castShadow = true;
 
-        this.ball.position.set(9, -10, 1);
+        this.ball.position.set(BALL_CONS.init_x, BALL_CONS.init_y, BALL_CONS.init_z);
         this.playField.add(this.ball);
+    }
+
+    // Create Launcher for the ball at button right side
+    createLauncher(){
+        // Launcher stick to hit the ball
+        const stickGeometry = new THREE.CylinderGeometry(LAUNCHER_CONS.stick_upper_radius, LAUNCHER_CONS.stick_lower_radius, LAUNCHER_CONS.stick_length);
+        const stickTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        stickTexture.wrapS = THREE.RepeatWrapping;
+        stickTexture.wrapT = THREE.RepeatWrapping;
+        const stickMaterial = new THREE.MeshPhongMaterial({ map: stickTexture });
+        this.launchStick = new THREE.Mesh(stickGeometry, stickMaterial);
+        // Shadow
+        this.launchStick.castShadow = true;
+        this.launchStick.receiveShadow = true;
+
+        this.launchStick.position.set(this.ball.position.x, LAUNCHER_CONS.init_y, this.ball.position.z);
+        this.playField.add(this.launchStick);
+
+        // Launcher barriers
+        const barrierGeometry = new THREE.BoxGeometry(LAUNCHER_CONS.barrier_width, LAUNCHER_CONS.barrier_height, LAUNCHER_CONS.barrier_depth);
+        const barrierTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        barrierTexture.wrapS = THREE.RepeatWrapping;
+        barrierTexture.wrapT = THREE.RepeatWrapping;
+        const barrierMaterial = new THREE.MeshPhongMaterial({ map: barrierTexture });
+        const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+        barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius/2 - LAUNCHER_CONS.barrier_width, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
+        this.playField.add(barrier);
+        this.launchBarrier.push(barrier);
+
+        // Corner
+        const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
+        const cornerTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        cornerTexture.wrapS = THREE.RepeatWrapping;
+        cornerTexture.wrapT = THREE.RepeatWrapping;
+        const cornerMaterial = new THREE.MeshPhongMaterial({ map: cornerTexture });
+        const corner = new THREE.Mesh(cornerGeometry, cornerMaterial);
+        corner.position.set((TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2-TABLE_CONS.wallWidth/2-(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2)/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
+        this.playField.add(corner);
     }
 
     createButtons(){
@@ -280,8 +325,13 @@ class PinballGame{
             case '?':
                 this.isRightActive = true;
                 break;
-            // todo: add space bar for launching the ball
-            // todo: add r for reset the ball
+            case ' ':
+                this.isLauncher = true;
+                break;
+            case 'R':
+            case 'r':
+                this.reset = true;
+                break;
         }
     }
 
@@ -294,6 +344,13 @@ class PinballGame{
             case '/':
             case '?':
                 this.isRightActive = false;
+                break;
+            case ' ':
+                this.isLauncher = false;
+                break;
+            case 'R':
+            case 'r':
+                this.reset = false;
                 break;
         }
     }
@@ -310,6 +367,20 @@ class PinballGame{
         }
         else {
             this.rightFlipper.rotation.z = Math.min(this.rightFlipper.rotation.z + FLIPPER_CONS.return_speed * delta, FLIPPER_CONS.init_angle);
+        }
+    }
+
+    updateLauncher(delta){
+        if (this.isLauncher) {
+            this.launchStick.position.y = Math.max(this.launchStick.position.y - LAUNCHER_CONS.holding_speed * delta, LAUNCHER_CONS.stick_lowest);
+        } else {
+            this.launchStick.position.y = Math.min(this.launchStick.position.y + LAUNCHER_CONS.releasing_speed * delta, LAUNCHER_CONS.init_y)
+        }
+    }
+
+    resetGame(){
+        if (this.reset) {
+            this.ball.position.set(BALL_CONS.init_x, BALL_CONS.init_y, BALL_CONS.init_z);
         }
     }
 
@@ -360,11 +431,13 @@ class PinballGame{
         const currentTime = this.clock.getElapsedTime();
         const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
-        this.updateFlippers(deltaTime);    
+        this.updateFlippers(deltaTime);
+        this.updateLauncher(deltaTime);
+        this.resetGame();    
         this.leftFlipperBox.userData.obb.copy(this.leftFlipperBox.geometry.userData.obb);
         this.leftFlipperBox.updateMatrixWorld(true);
         this.leftFlipperBox.userData.obb.applyMatrix4(this.leftFlipperBox.matrixWorld);
-        console.log(this.leftFlipperBox.matrixWorld);
+        //console.log(this.leftFlipperBox.matrixWorld);
         //this.updatePhysics(deltaTime);
 
         // Update Phong shading matterial

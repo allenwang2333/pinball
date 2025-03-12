@@ -42,6 +42,9 @@ export const BALL_CONS = {
     radius: 0.5,
     segments: 32,
     color: 0xffffff,
+    init_x: 9, 
+    init_y: -10,
+    init_z: 1
 };
 
 export const PLAY_FIELD_CONS = {
@@ -52,6 +55,19 @@ export const META = {
     bounce_factor: 0.8,
 };
 
-export const launcher = {
-    
+export const LAUNCHER_CONS = {
+    stick_length: 10,
+    stick_upper_radius: 0.05,
+    stick_lower_radius: 0.1,
+    init_y: BALL_CONS.init_y - 5 - BALL_CONS.radius/2,
+    stick_lowest: BALL_CONS.init_y - 5 - BALL_CONS.radius/2 - 4,
+    holding_speed: 2,
+    releasing_speed: 20,
+    barrier_width: 0.5,
+    barrier_height: 20,
+    barrier_depth: 1
+};
+
+export const BOTTOM_BARRIER = {
+
 };
