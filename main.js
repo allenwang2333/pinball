@@ -90,6 +90,10 @@ class PinballGame {
         this.isAttachedToLauncher = false;
         this.isLaunched = false;
         this.previousHoldingLauncher = false;
+
+        this.audioListener = null;
+        this.audioLoader = null;
+        this.sound = null;
         this.init();
         
     }
@@ -102,6 +106,7 @@ class PinballGame {
         this.createBall();
         this.createLauncher();
         this.createButtons();
+        this.createSound();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -323,6 +328,21 @@ class PinballGame {
         folder.open();
     }
 
+    createSound() {
+        this.audioListener = new THREE.AudioListener();
+        this.camera.add(this.audioListener);
+        this.audioLoader = new THREE.AudioLoader();
+        this.sound = new THREE.Audio(this.audioListener);
+        this.audioLoader.load('assets/ambient.mp3', (buffer) => {
+            this.sound.setBuffer(buffer);
+            this.sound.setLoop(true);
+            this.sound.setVolume(0.2);
+        });
+        document.addEventListener('click', () => {
+            this.sound.play();
+        });
+    }
+
     handleKeyDown(event){
         switch (event.key) {
             case 'z':
@@ -429,11 +449,19 @@ class PinballGame {
         }
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
-            this.ballVelocity.set(0, launchPower, 0); 
+            this.ballVelocity.set(-0.1, launchPower, 0); 
             //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
-
+            
             this.isLaunched = true;
             this.isAttachedToLauncher = false;
+
+
+            this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+                const sound = new THREE.Audio(this.audioListener);
+                sound.setBuffer(buffer);
+                sound.setVolume(0.5);
+                sound.play();
+            });
          }  
         
     }
@@ -484,12 +512,12 @@ class PinballGame {
         this.lastTime = currentTime;
         let substep = 10;
         let dt = deltaTime / substep;
-        //for (let i = 0; i < substep; i++) {
-            // this.updateFlippers(dt);
-            // this.updateLauncher(dt);
-            // this.handleCollision(dt);
-            // this.updatePhysics(dt);
-        //}
+        // for (let i = 0; i < substep; i++) {
+        //     this.updateFlippers(dt);
+        //     this.updateLauncher(dt);
+        //     this.handleCollision(dt);
+        //     this.updatePhysics(dt);
+        // }
 
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
