@@ -71,6 +71,14 @@ class PinballGame {
 
         // Track Game State
         this.gameStart = false;
+        this.score = 0;
+        this.history = [];
+        this.firstThree = {
+            '1st': 0,
+            '2nd': 0,
+            '3rd': 0,
+            'Current Score': 0
+        }
 
         this.isLeftActive = false;
         this.isRightActive = false;
@@ -109,6 +117,7 @@ class PinballGame {
         this.createBall();
         this.createLauncher();
         this.createBottom();
+        this.scoreBoard();
         this.createButtons();
         this.createSound();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
@@ -401,6 +410,16 @@ class PinballGame {
         this.walls.push(rightBumper);
     }
 
+    // Display Score
+    scoreBoard(){
+        const board = this.gui.addFolder('Score Board');
+        board.add(this.firstThree, '1st');
+        board.add(this.firstThree, '2nd');
+        board.add(this.firstThree, '3rd');
+        board.add(this.firstThree, 'Current Score').listen();
+        board.open();
+    }
+
     createButtons(){
         const folder = this.gui.addFolder('Game Settings');
         folder.add(this.settings, 'difficulty', 1, 5).onChange((value) => {
@@ -497,6 +516,7 @@ class PinballGame {
             this.gameStart = false;
             this.isAttachedToLauncher = true;
             this.previousHoldingLauncher = false;
+            this.score = 0;
         }
     }
 
@@ -622,7 +642,9 @@ class PinballGame {
 
         this.updatePhysics(deltaTime );
         
-        this.resetGame();    
+        this.resetGame();
+
+        this.firstThree['Current Score'] = this.score;
 
         
 
