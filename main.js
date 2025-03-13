@@ -108,6 +108,7 @@ class PinballGame {
         this.createSpeedBump();
         this.createBall();
         this.createLauncher();
+        this.createBottom();
         this.createButtons();
         this.createSound();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
@@ -194,7 +195,7 @@ class PinballGame {
         this.leftFlipper = new THREE.Group();
         this.leftFlipper.add(this.leftFlipperBox);
         this.leftFlipperBox.position.set(FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
+        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2-0.01);
         this.leftFlipper.rotation.z = -FLIPPER_CONS.init_angle;
         this.leftFlipperBox.userData.obb = new OBB();
         this.playField.add(this.leftFlipper);
@@ -205,7 +206,7 @@ class PinballGame {
         this.rightFlipper = new THREE.Group();
         this.rightFlipper.add(this.rightFlipperBox);
         this.rightFlipperBox.position.set(-FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
+        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2-0.01);
         this.rightFlipper.rotation.z = FLIPPER_CONS.init_angle;
         this.playField.add(this.rightFlipper);
     }
@@ -321,6 +322,83 @@ class PinballGame {
         corner.position.set((TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2-TABLE_CONS.wallWidth/2-(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2)/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
         this.playField.add(corner);
         this.walls.push(corner);
+    }
+
+    // Build the bottom part of the board
+    createBottom(){
+        // Lower left wall
+        let width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        let height = 8;
+        let depth = TABLE_CONS.tableDepth;
+        const lowerLeftGeometry = new THREE.BoxGeometry(width, height, depth);
+        const lowerLeftTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        lowerLeftTexture.wrapS = THREE.RepeatWrapping;
+        lowerLeftTexture.wrapT = THREE.RepeatWrapping;
+        const lowerLeftMaterial = new THREE.MeshPhongMaterial({ map: lowerLeftTexture });
+        const lowerLeft = new THREE.Mesh(lowerLeftGeometry, lowerLeftMaterial);
+        // Shadow
+        lowerLeft.castShadow = true;
+
+        lowerLeft.position.set(-6 - width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+        this.playField.add(lowerLeft);
+        this.walls.push(lowerLeft);
+
+        // Lower left bumper
+        height = Math.sqrt(2)*width;
+        width = 1;
+
+        const leftBumperGeometry = new THREE.BoxGeometry(width, height, depth);
+        const leftBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        leftBumperTexture.wrapS = THREE.RepeatWrapping;
+        leftBumperTexture.wrapT = THREE.RepeatWrapping;
+        const leftBumperMaterial = new THREE.MeshStandardMaterial({ map: leftBumperTexture });
+        const leftBumper = new THREE.Mesh(leftBumperGeometry, leftBumperMaterial);
+
+        // Shadow
+        leftBumper.castShadow = true;
+
+        width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        leftBumper.rotateZ(Math.PI/4);
+        leftBumper.position.set(-6 - width/2-0.3, -TABLE_CONS.tableHeight/2+8+height/2-1.2, depth-0.01);
+        this.playField.add(leftBumper);
+        this.walls.push(leftBumper);
+
+        // Lower right wall
+        width = 2;
+        height = 8;
+        depth = TABLE_CONS.tableDepth;
+        const lowerRightGeometry = new THREE.BoxGeometry(width, height, depth);
+        const lowerRightTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        lowerRightTexture.wrapS = THREE.RepeatWrapping;
+        lowerRightTexture.wrapT = THREE.RepeatWrapping;
+        const lowerRightMaterial = new THREE.MeshPhongMaterial({ map: lowerRightTexture });
+        const lowerRight = new THREE.Mesh(lowerRightGeometry, lowerRightMaterial);
+        // Shadow
+        lowerRight.castShadow = true;
+
+        lowerRight.position.set(6 + width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+        this.playField.add(lowerRight);
+        this.walls.push(lowerRight);
+
+        // Lower right bumper
+        height = Math.sqrt(2)*width;
+        width = 0.5;
+
+        const rightBumperGeometry = new THREE.BoxGeometry(width, height, depth);
+        const rightBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        rightBumperTexture.wrapS = THREE.RepeatWrapping;
+        rightBumperTexture.wrapT = THREE.RepeatWrapping;
+        const rightBumperMaterial = new THREE.MeshStandardMaterial({ map: rightBumperTexture });
+        const rightBumper = new THREE.Mesh(rightBumperGeometry, rightBumperMaterial);
+
+        // Shadow
+        rightBumper.castShadow = true;
+
+        width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        rightBumper.rotateZ(-Math.PI/4);
+        rightBumper.position.set(6 + width/2 - 0.81, -TABLE_CONS.tableHeight/2+8+height/2-0.6, depth-0.01);
+        this.playField.add(rightBumper);
+        this.walls.push(rightBumper);
     }
 
     createButtons(){
