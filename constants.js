@@ -64,7 +64,7 @@ export const LAUNCHER_CONS = {
     holding_speed: 2.0,
     releasing_speed: 20,
     barrier_width: 0.5,
-    barrier_height: 10,
+    barrier_height: 10.4,
     barrier_depth: 1,
     max_power: 50 
 };
