@@ -68,6 +68,8 @@ class PinballGame {
         // Launcher
         this.launchStick = null;
         this.launchBarrier = [];
+        // Arch
+        this.arc = [];
 
         // Track Game State
         this.gameStart = false;
@@ -117,6 +119,7 @@ class PinballGame {
         this.createBall();
         this.createLauncher();
         this.createBottom();
+        this.createArch();
         this.scoreBoard();
         this.createButtons();
         this.createSound();
@@ -411,6 +414,37 @@ class PinballGame {
         rightBumper.position.set(6 + width/2 - 0.6, -TABLE_CONS.tableHeight/2+8+height/2-0.7, depth-0.01);
         this.playField.add(rightBumper);
         this.walls.push(rightBumper);
+    }
+
+    // Create Arch
+    createArch(){
+
+        const width = 6, height = 6;
+        const shape = new THREE.Shape();
+        shape.moveTo(-width / 2, height / 2);  //Top left
+        shape.lineTo(width / 2, height / 2);   //Top right
+        shape.lineTo(width / 2, -height / 2);  //Bottom right
+
+        // Concave arc
+        const radius = 6;
+        shape.absarc(-width/2, -height / 2, radius, 0, Math.PI/2, false);
+
+        const extrudeSettings = { depth: TABLE_CONS.wallDepth/2, bevelEnabled: false };
+
+        // Create 3D geometry by extruding the shape
+        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+        const texture = new THREE.TextureLoader().load('assets/wood.jpg');
+        //texture.wrapS = THREE.RepeatWrapping;
+        //texture.wrapT = THREE.RepeatWrapping;
+        const material = new THREE.MeshPhongMaterial({ map: texture });
+        //const material = new THREE.MeshPhongMaterial({ color: 0xff5733 });
+
+        const concaveBox = new THREE.Mesh(geometry, material);
+        concaveBox.position.set(TABLE_CONS.tableWidth/2-width/2, TABLE_CONS.tableHeight/2-height/2, TABLE_CONS.wallDepth/4);
+
+        this.playField.add(concaveBox);
+        this.arc.push(concaveBox);
     }
 
     // Display Score
