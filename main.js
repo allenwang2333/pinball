@@ -561,7 +561,7 @@ function createOBBFromObject(object) {
     object.geometry.computeBoundingBox();
     
     const bbox = object.geometry.boundingBox;
-    if (VISUALIZE_BOUNDING_BOX && !object.bboxviz) {
+    if (VISUALIZE_BOUNDING_BOX && !object.obb) {
         let bboxviz = new THREE.Box3Helper(bbox, 0xffff00);
         object.add(bboxviz);
     }
