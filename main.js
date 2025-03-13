@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { OBB } from 'three/addons/math/OBB.js';
 import { 
@@ -13,6 +12,7 @@ import {
     PLAY_FIELD_CONS,
     LAUNCHER_CONS,
     VISUALIZE_BOUNDING_BOX,
+    META,
 } from './constants';
 
 let temp;
@@ -69,6 +69,17 @@ class PinballGame {
         this.launchStick = null;
         this.launchBarrier = [];
 
+        // Track Game State
+        this.gameStart = false;
+        this.score = 0;
+        this.history = [];
+        this.firstThree = {
+            '1st': 0,
+            '2nd': 0,
+            '3rd': 0,
+            'Current Score': 0
+        }
+
         this.isLeftActive = false;
         this.isRightActive = false;
         this.holdingLauncher = false;
@@ -105,6 +116,8 @@ class PinballGame {
         this.createSpeedBump();
         this.createBall();
         this.createLauncher();
+        this.createBottom();
+        this.scoreBoard();
         this.createButtons();
         this.createSound();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
@@ -191,7 +204,7 @@ class PinballGame {
         this.leftFlipper = new THREE.Group();
         this.leftFlipper.add(this.leftFlipperBox);
         this.leftFlipperBox.position.set(FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
+        this.leftFlipper.position.set(-6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2-0.01);
         this.leftFlipper.rotation.z = -FLIPPER_CONS.init_angle;
         this.leftFlipperBox.userData.obb = new OBB();
         this.playField.add(this.leftFlipper);
@@ -202,7 +215,7 @@ class PinballGame {
         this.rightFlipper = new THREE.Group();
         this.rightFlipper.add(this.rightFlipperBox);
         this.rightFlipperBox.position.set(-FLIPPER_CONS.width/2, FLIPPER_CONS.height/2, 0);
-        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2);
+        this.rightFlipper.position.set(6.5, -11, (TABLE_CONS.tableDepth+FLIPPER_CONS.depth)/2-0.01);
         this.rightFlipper.rotation.z = FLIPPER_CONS.init_angle;
         this.playField.add(this.rightFlipper);
     }
@@ -306,7 +319,7 @@ class PinballGame {
         const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
         barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius/2 - LAUNCHER_CONS.barrier_width, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
         this.playField.add(barrier);
-        this.launchBarrier.push(barrier);
+        this.walls.push(barrier);
 
         // Corner
         const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
@@ -317,6 +330,105 @@ class PinballGame {
         const corner = new THREE.Mesh(cornerGeometry, cornerMaterial);
         corner.position.set((TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2-TABLE_CONS.wallWidth/2-(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2)/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
         this.playField.add(corner);
+        this.walls.push(corner);
+    }
+
+    // Build the bottom part of the board
+    createBottom(){
+        // Lower left wall
+        let width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        let height = 8;
+        let depth = TABLE_CONS.tableDepth;
+        const lowerLeftGeometry = new THREE.BoxGeometry(width, height, depth);
+        const lowerLeftTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        lowerLeftTexture.wrapS = THREE.RepeatWrapping;
+        lowerLeftTexture.wrapT = THREE.RepeatWrapping;
+        const lowerLeftMaterial = new THREE.MeshPhongMaterial({ map: lowerLeftTexture });
+        const lowerLeft = new THREE.Mesh(lowerLeftGeometry, lowerLeftMaterial);
+        // Shadow
+        lowerLeft.castShadow = true;
+
+        lowerLeft.position.set(-6 - width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+        this.playField.add(lowerLeft);
+        this.walls.push(lowerLeft);
+
+        // Lower left bumper
+        height = Math.sqrt(2)*width;
+        width = 1;
+
+        const leftBumperGeometry = new THREE.BoxGeometry(width, height, depth);
+        const leftBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        leftBumperTexture.wrapS = THREE.RepeatWrapping;
+        leftBumperTexture.wrapT = THREE.RepeatWrapping;
+        const leftBumperMaterial = new THREE.MeshStandardMaterial({ map: leftBumperTexture });
+        const leftBumper = new THREE.Mesh(leftBumperGeometry, leftBumperMaterial);
+
+        // Shadow
+        leftBumper.castShadow = true;
+
+        width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        leftBumper.rotateZ(Math.PI/4);
+        leftBumper.position.set(-6 - width/2-0.3, -TABLE_CONS.tableHeight/2+8+height/2-1.2, depth-0.01);
+        this.playField.add(leftBumper);
+        this.walls.push(leftBumper);
+
+        // Lower right wall
+        width = 2;
+        height = 8;
+        depth = TABLE_CONS.tableDepth;
+        const lowerRightGeometry = new THREE.BoxGeometry(width, height, depth);
+        const lowerRightTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        lowerRightTexture.wrapS = THREE.RepeatWrapping;
+        lowerRightTexture.wrapT = THREE.RepeatWrapping;
+        const lowerRightMaterial = new THREE.MeshPhongMaterial({ map: lowerRightTexture });
+        const lowerRight = new THREE.Mesh(lowerRightGeometry, lowerRightMaterial);
+        // Shadow
+        lowerRight.castShadow = true;
+
+        lowerRight.position.set(6 + width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+        this.playField.add(lowerRight);
+        this.walls.push(lowerRight);
+
+        // Lower right bumper
+        height = Math.sqrt(2)*width;
+        width = 0.5;
+
+        const rightBumperGeometry = new THREE.BoxGeometry(width, height, depth);
+        const rightBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        rightBumperTexture.wrapS = THREE.RepeatWrapping;
+        rightBumperTexture.wrapT = THREE.RepeatWrapping;
+        const rightBumperMaterial = new THREE.MeshStandardMaterial({ map: rightBumperTexture });
+        const rightBumper = new THREE.Mesh(rightBumperGeometry, rightBumperMaterial);
+
+        // Shadow
+        rightBumper.castShadow = true;
+
+        width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        rightBumper.rotateZ(-Math.PI/4);
+        rightBumper.position.set(6 + width/2 - 0.81, -TABLE_CONS.tableHeight/2+8+height/2-0.6, depth-0.01);
+        this.playField.add(rightBumper);
+        this.walls.push(rightBumper);
+    }
+
+    // Display Score
+    scoreBoard(){
+        const board = this.gui.addFolder('Score Board');
+        board.add(this.firstThree, '1st').listen();
+        board.add(this.firstThree, '2nd').listen();
+        board.add(this.firstThree, '3rd').listen();
+        board.add(this.firstThree, 'Current Score').listen();
+        board.open();
+    }
+
+    // Update Score Board
+    updateScoreBoard(){
+        this.history.sort((a, b) => b - a);
+        for (let i = 0; i < Math.min(this.history.length, 3); i++) {
+            if (i === 0) this.firstThree['1st'] = this.history[i];
+            if (i === 1) this.firstThree['2nd'] = this.history[i];
+            if (i === 2) this.firstThree['3rd'] = this.history[i];
+        }
+        this.firstThree['Current Score'] = this.score;
     }
 
     createButtons(){
@@ -401,6 +513,7 @@ class PinballGame {
     updateLauncher(delta){
         if (this.holdingLauncher) {
             this.launchStick.position.y = Math.max(this.launchStick.position.y - LAUNCHER_CONS.holding_speed * delta, LAUNCHER_CONS.stick_lowest);
+            this.gameStart = true;
         } else {
             this.launchStick.position.y = Math.min(this.launchStick.position.y + LAUNCHER_CONS.releasing_speed * delta, LAUNCHER_CONS.init_y)
         }
@@ -409,11 +522,19 @@ class PinballGame {
     resetGame(){
         if (this.reset) {
             this.ball.position.set(BALL_CONS.init_x, BALL_CONS.init_y, BALL_CONS.init_z);
+            this.ballVelocity.set(0, 0, 0);
+            this.isLaunched = false;
+            this.gameStart = false;
+            this.isAttachedToLauncher = true;
+            this.previousHoldingLauncher = false;
+            this.score = 0;
+            this.reset = false;
         }
     }
 
     updatePhysics(delta){
-        if (this.isLaunched) {
+        this.ball.obb = createOBBFromObject(this.ball);
+        if (this.gameStart && this.isLaunched) {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
@@ -428,16 +549,10 @@ class PinballGame {
     }
 
     handleLauncherCollision(deltaTime){
-
+        const ballPos = new THREE.Vector3();
+        this.ball.getWorldPosition(ballPos);
         this.launchStick.obb = createOBBFromObject(this.launchStick);
-        if (this.ball.obb.intersectsOBB(this.launchStick.obb)) { 
-            //console.log('Ball hit the launcher');
-            // something wrong with relaunching
-            // if (this.isLaunched && !this.holdingLauncher) {
-            //     this.isLaunched = false;
-            //     this.isAttachedToLauncher = true;
-            //     this.ballVelocity.set(0, 0, 0);
-            // }
+        if (this.ball.obb.intersectsOBB(this.launchStick.obb) && ballPos.y > -TABLE_CONS.tableHeight/2+3+BALL_CONS.radius) { 
             if (!this.isLaunched &&!this.holdingLauncher) {
                 this.isAttachedToLauncher = true;
                 this.ballVelocity.set(0, 0, 0);
@@ -485,6 +600,21 @@ class PinballGame {
             wall.obb = createOBBFromObject(wall);
             if (this.ball.obb.intersectsOBB(wall.obb)) {
                 // TODO handle wall collision logic
+                const factor = META.bounce_factor;
+                // top wall
+                if (wall.position.y > 0) {
+                    this.ballVelocity.y = -this.ballVelocity.y * factor;
+                }
+                // left or right wall
+                else if (wall.position.x < 0 || wall.position.x > 0) {
+                    this.ballVelocity.x = -this.ballVelocity.x * factor;
+                }
+                // bottom wall
+                else if (wall.position.y < 0) {
+                    console.log("in");
+                    this.ballVelocity.y = this.ballVelocity.y * factor;
+                }
+                
             }
         }
     }
@@ -495,6 +625,15 @@ class PinballGame {
             if (this.ball.obb.intersectsOBB(bumper.obb)) {
                 // TODO handle bumper collision logic
             }
+        }
+    }
+
+    checkGameState(){
+        const ballPos = new THREE.Vector3();
+        this.ball.getWorldPosition(ballPos);
+        if(ballPos.y < -TABLE_CONS.tableHeight/2) {
+            this.reset = true;
+            this.history.push(this.score);
         }
     }
 
@@ -518,13 +657,19 @@ class PinballGame {
         //     this.handleCollision(dt);
         //     this.updatePhysics(dt);
         // }
+        // Check if Game End
+        this.checkGameState();
 
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
         this.handleCollision(deltaTime);
         this.updatePhysics(deltaTime );
-        
-        this.resetGame();    
+
+        // Update Score Board Before End the Game
+        this.updateScoreBoard();
+        // Reset
+        this.resetGame();
+
 
         
 
@@ -541,7 +686,7 @@ function createOBBFromObject(object) {
     object.geometry.computeBoundingBox();
     
     const bbox = object.geometry.boundingBox;
-    if (VISUALIZE_BOUNDING_BOX) {
+    if (VISUALIZE_BOUNDING_BOX && !object.obb) {
         let bboxviz = new THREE.Box3Helper(bbox, 0xffff00);
         object.add(bboxviz);
     }

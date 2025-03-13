@@ -31,8 +31,8 @@ export const BUMPER_CONS = {
 };
 
 export const SPEED_BUMPER_CONS = {
-    width: 3.5,
-    height: 0.5,
+    width: 4.5,
+    height: 1.5,
     depth: 1,
     color: 0xffff20,
     init_angle: Math.PI / 9,
