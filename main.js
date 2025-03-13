@@ -69,6 +69,9 @@ class PinballGame {
         this.launchStick = null;
         this.launchBarrier = [];
 
+        // Track Game State
+        this.gameStart = false;
+
         this.isLeftActive = false;
         this.isRightActive = false;
         this.holdingLauncher = false;
@@ -306,7 +309,7 @@ class PinballGame {
         const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
         barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius/2 - LAUNCHER_CONS.barrier_width, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
         this.playField.add(barrier);
-        this.launchBarrier.push(barrier);
+        this.walls.push(barrier);
 
         // Corner
         const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
@@ -317,6 +320,7 @@ class PinballGame {
         const corner = new THREE.Mesh(cornerGeometry, cornerMaterial);
         corner.position.set((TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2-TABLE_CONS.wallWidth/2-(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2)/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
         this.playField.add(corner);
+        this.walls.push(corner);
     }
 
     createButtons(){
@@ -401,6 +405,7 @@ class PinballGame {
     updateLauncher(delta){
         if (this.holdingLauncher) {
             this.launchStick.position.y = Math.max(this.launchStick.position.y - LAUNCHER_CONS.holding_speed * delta, LAUNCHER_CONS.stick_lowest);
+            this.gameStart = true;
         } else {
             this.launchStick.position.y = Math.min(this.launchStick.position.y + LAUNCHER_CONS.releasing_speed * delta, LAUNCHER_CONS.init_y)
         }
@@ -409,12 +414,17 @@ class PinballGame {
     resetGame(){
         if (this.reset) {
             this.ball.position.set(BALL_CONS.init_x, BALL_CONS.init_y, BALL_CONS.init_z);
-            // this.isLaunched = false;
+            this.ballVelocity.set(0, 0, 0);
+            this.isLaunched = false;
+            this.gameStart = false;
+            this.isAttachedToLauncher = true;
+            this.previousHoldingLauncher = false;
         }
     }
 
     updatePhysics(delta){
-        if (this.isLaunched) {
+        this.ball.obb = createOBBFromObject(this.ball);
+        if (this.gameStart && this.isLaunched) {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
@@ -432,13 +442,6 @@ class PinballGame {
 
         this.launchStick.obb = createOBBFromObject(this.launchStick);
         if (this.ball.obb.intersectsOBB(this.launchStick.obb)) { 
-            //console.log('Ball hit the launcher');
-            // something wrong with relaunching
-            // if (this.isLaunched && !this.holdingLauncher) {
-            //     this.isLaunched = false;
-            //     this.isAttachedToLauncher = true;
-            //     this.ballVelocity.set(0, 0, 0);
-            // }
             if (!this.isLaunched &&!this.holdingLauncher) {
                 this.isAttachedToLauncher = true;
                 this.ballVelocity.set(0, 0, 0);
@@ -495,6 +498,11 @@ class PinballGame {
                 else if (wall.position.x < 0 || wall.position.x > 0) {
                     this.ballVelocity.x = -this.ballVelocity.x * factor;
                 }
+                // bottom wall
+                else if (wall.position.y < 0) {
+                    console.log("in");
+                    this.ballVelocity.y = this.ballVelocity.y * factor;
+                }
                 
             }
         }
@@ -533,6 +541,7 @@ class PinballGame {
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
         this.handleCollision(deltaTime);
+
         this.updatePhysics(deltaTime );
         
         this.resetGame();    
@@ -552,7 +561,7 @@ function createOBBFromObject(object) {
     object.geometry.computeBoundingBox();
     
     const bbox = object.geometry.boundingBox;
-    if (VISUALIZE_BOUNDING_BOX) {
+    if (VISUALIZE_BOUNDING_BOX && !object.bboxviz) {
         let bboxviz = new THREE.Box3Helper(bbox, 0xffff00);
         object.add(bboxviz);
     }
