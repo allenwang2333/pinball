@@ -167,6 +167,9 @@ class PinballGame {
         topWall.position.set(0, (TABLE_CONS.tableHeight+TABLE_CONS.topWallHeight)/2, (TABLE_CONS.wallDepth-TABLE_CONS.tableDepth)/2);
         this.playField.add(topWall);
         this.walls.push(topWall);
+        topWall.castShadow = true;
+        console.log("top wall", topWall.position)
+
         const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.cornerWidth, TABLE_CONS.cornerHeight, TABLE_CONS.cornerDepth);
         const leftConner = new THREE.Mesh(cornerGeometry, wallMaterial);
         // Shadow
@@ -322,7 +325,6 @@ class PinballGame {
         this.walls.push(barrier);
 
         // Corner
-        console.log(this.walls[1].position, barrier.position);
         const cornerGeometry = new THREE.BoxGeometry(this.walls[1].position.x - barrier.position.x - TABLE_CONS.wallWidth/2 - barrierGeometry.parameters.width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
         const cornerTexture = new THREE.TextureLoader().load('assets/wood.jpg');
         cornerTexture.wrapS = THREE.RepeatWrapping;
@@ -534,7 +536,7 @@ class PinballGame {
     }
 
     updatePhysics(delta){
-        this.ball.obb = createOBBFromObject(this.ball);
+        // this.ball.obb = createOBBFromObject(this.ball);
         if (this.gameStart && this.isLaunched) {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
@@ -550,42 +552,20 @@ class PinballGame {
         this.handleWallCollision(deltaTime);
     }
 
+    handleBounce(result) {
+        // handle bounce of ball
+        const normal = result.normal;
+        const velocity = this.ballVelocity.clone();
+        const dot = velocity.dot(normal);
+        const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(2 * dot));
+        bounceVelocity.multiplyScalar(META.bounce_factor);
+        this.ballVelocity.copy(bounceVelocity);
+        const pushDistance = BALL_CONS.radius - result.distance + 0.01;
+        this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+    }
+
     handleBarrierCollision(deltaTime) {
-        for (let barrier of this.launchBarrier) {
-            barrier.obb = createOBBFromObject(barrier);
-            const collision = sphereOBBCollision(this.ball, barrier.obb);
-            
-            if (collision.collision) {
-                // Get collision normal
-                const normal = collision.normal;
-                console.log(normal);
-                
-                // Calculate reflection vector using the normal
-                const bounceFactor = META.bounce_factor;
-                
-                // Reflect velocity based on collision normal
-                // v' = v - 2(v·n)n
-                const dot = this.ballVelocity.dot(normal);
-                const reflection = this.ballVelocity.clone().sub(
-                    normal.clone().multiplyScalar(2 * dot)
-                ).multiplyScalar(bounceFactor);
-                
-                this.ballVelocity.copy(reflection);
-                
-                // Move the ball outside the collision to prevent sticking
-                // We move it slightly past the collision point along the normal
-                const pushDistance = BALL_CONS.radius - collision.distance + 0.01;
-                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
-                
-                // Play a sound effect
-                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
-                    const sound = new THREE.Audio(this.audioListener);
-                    sound.setBuffer(buffer);
-                    sound.setVolume(0.3);
-                    sound.play();
-                });
-            }
-        }
+
     }
     handleLauncherCollision(deltaTime){
         const ballPos = new THREE.Vector3();
@@ -603,7 +583,7 @@ class PinballGame {
         }
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
-            this.ballVelocity.set(1, launchPower, 0); 
+            this.ballVelocity.set(-1, launchPower, 0); 
             //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
             
             this.isLaunched = true;
@@ -621,64 +601,28 @@ class PinballGame {
     }
     
     handleFlipperCollision(deltaTime){
-
-        this.leftFlipperBox.obb = createOBBFromObject(this.leftFlipperBox);
-        if (this.ball.obb.intersectsOBB(this.leftFlipperBox.obb)) {
-            //TODO: handle collision logic
-        }
-        
-        this.rightFlipperBox.obb = createOBBFromObject(this.rightFlipperBox);
-        if (this.ball.obb.intersectsOBB(this.rightFlipperBox.obb)) {
-            //TODO: handle collision logic
-        }
         
     }
 
     handleWallCollision(deltaTime) {
-        for (let wall of this.walls) {
+        // make it two phased collision detection. 
+        // first test with OBB
+        // then test with sphere-to-box distance
+        for (let i = 0; i < this.walls.length; i++) {
+            const wall = this.walls[i];
             wall.obb = createOBBFromObject(wall);
-            const collision = sphereOBBCollision(this.ball, wall.obb);
-            
-            if (collision.collision) {
-                // Get collision normal
-                const normal = collision.normal;
-                console.log(normal);
-                
-                // Calculate reflection vector using the normal
-                const bounceFactor = META.bounce_factor;
-                
-                // Reflect velocity based on collision normal
-                const dot = this.ballVelocity.dot(normal);
-                const reflection = this.ballVelocity.clone().sub(
-                    normal.clone().multiplyScalar(2 * dot)
-                ).multiplyScalar(bounceFactor);
-                
-                console.log(this.ballVelocity);
-                this.ballVelocity.copy(reflection);
-                console.log(this.ballVelocity);
-                
-                // Move the ball outside the collision
-                const pushDistance = BALL_CONS.radius - collision.distance + 0.01;
-                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
-                
-                // Play a sound effect for wall collision
-                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
-                    const sound = new THREE.Audio(this.audioListener);
-                    sound.setBuffer(buffer);
-                    sound.setVolume(0.4);
-                    sound.play();
-                });
+            if (this.ball.obb.intersectsOBB(wall.obb)) {
+                // second test
+                const result = sphereCollision(this.ball, wall);
+                if (result.collision){
+                    this.handleBounce(result);
+                }
             }
         }
+
     }
 
     handleBumperCollision(deltaTime){
-        for (let bumper of this.bumpers) {
-            bumper.obb = createOBBFromObject(bumper);
-            if (this.ball.obb.intersectsOBB(bumper.obb)) {
-                // TODO handle bumper collision logic
-            }
-        }
     }
 
     checkGameState(){
@@ -731,6 +675,42 @@ class PinballGame {
     
         this.renderer.render(this.scene, this.camera);
         this.stats.update();
+    }
+}
+
+function sphereCollision(sphere, obj){
+    // closest point on the box to the sphere center
+    // find the center of the ball
+    const sphereCenter = sphere.position; // local position
+    // find min and max of the box in local space
+    const box = obj.geometry.boundingBox;
+    const boxMin = new THREE.Vector3(box.min.x, box.min.y, box.min.z);
+    boxMin.applyMatrix4(obj.matrix);
+    const boxMax = new THREE.Vector3(box.max.x, box.max.y, box.max.z);
+    boxMax.applyMatrix4(obj.matrix);
+    // find the closest point on the box to the sphere center
+    const closestPoint = new THREE.Vector3(
+        Math.max(boxMin.x, Math.min(sphereCenter.x, boxMax.x)),
+        Math.max(boxMin.y, Math.min(sphereCenter.y, boxMax.y)),
+        Math.max(boxMin.z, Math.min(sphereCenter.z, boxMax.z))
+    );
+    // find the distance between the sphere center and the closest point on the box
+    const distance = sphereCenter.distanceTo(closestPoint);
+    // check if the distance is less than the sphere radius
+    if (distance <= BALL_CONS.radius) {
+        // calculate the normal vector
+        const normal = sphereCenter.clone().sub(closestPoint).normalize();
+        console.log("normal", normal, "point", closestPoint, );
+        return {
+            collision: true,
+            distance: distance,
+            normal: normal,
+            point: closestPoint
+        };
+    }
+
+    return {
+        collision: false,
     }
 }
 
