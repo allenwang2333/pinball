@@ -72,7 +72,7 @@ class PinballGame {
         // Track Game State
         this.gameStart = false;
         this.score = 0;
-        this.history = [23, 100, 200];
+        this.history = [];
         this.firstThree = {
             '1st': 0,
             '2nd': 0,
@@ -549,9 +549,10 @@ class PinballGame {
     }
 
     handleLauncherCollision(deltaTime){
-
+        const ballPos = new THREE.Vector3();
+        this.ball.getWorldPosition(ballPos);
         this.launchStick.obb = createOBBFromObject(this.launchStick);
-        if (this.ball.obb.intersectsOBB(this.launchStick.obb)) { 
+        if (this.ball.obb.intersectsOBB(this.launchStick.obb) && ballPos.y > -TABLE_CONS.tableHeight/2+3+BALL_CONS.radius) { 
             if (!this.isLaunched &&!this.holdingLauncher) {
                 this.isAttachedToLauncher = true;
                 this.ballVelocity.set(0, 0, 0);
@@ -668,7 +669,6 @@ class PinballGame {
         this.updateScoreBoard();
         // Reset
         this.resetGame();
-        this.score++;
 
 
         
