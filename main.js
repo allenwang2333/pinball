@@ -420,30 +420,40 @@ class PinballGame {
     createArch(){
 
         const width = 6, height = 6;
-        const shape = new THREE.Shape();
-        shape.moveTo(-width / 2, height / 2);  //Top left
-        shape.lineTo(width / 2, height / 2);   //Top right
-        shape.lineTo(width / 2, -height / 2);  //Bottom right
+        const concave = new THREE.Shape();
+        concave.moveTo(-width / 2, height / 2);  //Top left
+        concave.lineTo(width / 2, height / 2);   //Top right
+        concave.lineTo(width / 2, -height / 2);  //Bottom right
 
         // Concave arc
         const radius = 6;
-        shape.absarc(-width/2, -height / 2, radius, 0, Math.PI/2, false);
+        concave.absarc(-width/2, -height / 2, radius, 0, Math.PI/2, false);
 
         const extrudeSettings = { depth: TABLE_CONS.wallDepth/2, bevelEnabled: false };
 
         // Create 3D geometry by extruding the shape
-        const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const geometry = new THREE.ExtrudeGeometry(concave, extrudeSettings);
 
         const texture = new THREE.TextureLoader().load('assets/wood.jpg');
-        //texture.wrapS = THREE.RepeatWrapping;
-        //texture.wrapT = THREE.RepeatWrapping;
         const material = new THREE.MeshPhongMaterial({ map: texture });
-        //const material = new THREE.MeshPhongMaterial({ color: 0xff5733 });
 
         const concaveBox = new THREE.Mesh(geometry, material);
+        // Shadow
+        concaveBox.castShadow = true;
+
         concaveBox.position.set(TABLE_CONS.tableWidth/2-width/2, TABLE_CONS.tableHeight/2-height/2, TABLE_CONS.wallDepth/4);
 
         this.playField.add(concaveBox);
+        
+        // Bounding Box with Segments
+        const edges = new THREE.EdgesGeometry(concaveBox.geometry);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
+        const bounding = new THREE.LineSegments(edges, lineMaterial);
+        bounding.position.set(TABLE_CONS.tableWidth/2-width/2, TABLE_CONS.tableHeight/2-height/2, TABLE_CONS.wallDepth/4);
+        bounding.updateWorldMatrix(true);
+        concaveBox.add(bounding);
+        this.playField.add(bounding);
+        concaveBox.bounding = bounding;
         this.arc.push(concaveBox);
     }
 
@@ -584,6 +594,7 @@ class PinballGame {
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
+        this.handleArcCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -652,6 +663,18 @@ class PinballGame {
                     this.handleBounce(result);
                 }
             }
+        }
+
+    }
+
+    handleArcCollision(deltaTime){
+        // To Do
+        //console.log(this.arc[0].bounding);
+        this.arc[0].updateMatrixWorld(true);
+        const interLines = checkArcCollision(this.arc[0].bounding, this.ball);
+        if (interLines.length > 0) {
+            console.log("in");
+            this.ballVelocity.set(0, 0, 0);
         }
 
     }
@@ -734,7 +757,7 @@ function sphereCollision(sphere, obj){
     if (distance <= BALL_CONS.radius) {
         // calculate the normal vector
         const normal = sphereCenter.clone().sub(closestPoint).normalize();
-        console.log("normal", normal, "point", closestPoint, );
+        //console.log("normal", normal, "point", closestPoint, );
         return {
             collision: true,
             distance: distance,
@@ -803,6 +826,42 @@ function createOBBFromObject(object) {
 
     const obb = new OBB(center, size.multiplyScalar(0.5)).applyMatrix4(object.matrixWorld);
     return obb;
+}
+
+function checkArcCollision(lineSegments, ball) {
+    //Update World Matrix
+    lineSegments.updateWorldMatrix(true);
+    ball.updateWorldMatrix(true);
+
+    //Raycaster for each segments of bounding
+    const raycaster = new THREE.Raycaster();
+    //Vertices of each segments
+    const vertices = lineSegments.geometry.attributes.position.array;
+    const intersections = [];
+
+    for (let i = 0; i < vertices.length; i += 6) {
+        //The two ends of segments with xyz position
+        const startPoint = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+        const endPoint = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+
+        //Convert to world space
+        startPoint.applyMatrix4(lineSegments.matrixWorld);
+        endPoint.applyMatrix4(lineSegments.matrixWorld);
+
+        const directionVector = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
+
+        //Set raycaster from start to end of the segment
+        raycaster.set(startPoint, directionVector);
+        raycaster.far = startPoint.distanceTo(endPoint);
+
+        //Check intersection
+        const intersects = raycaster.intersectObject(ball, true);
+        if (intersects.length > 0) {
+            intersections.push({ index: i / 6, point: intersects[0].point });
+        }
+    }
+
+    return intersections;
 }
 
 // Phong Shading
