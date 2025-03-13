@@ -320,7 +320,7 @@ class PinballGame {
         barrierTexture.wrapT = THREE.RepeatWrapping;
         const barrierMaterial = new THREE.MeshPhongMaterial({ map: barrierTexture });
         const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-        barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius - LAUNCHER_CONS.barrier_width/2 - 0.1, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
+        barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius - LAUNCHER_CONS.barrier_width/2 -0.1, BALL_CONS.init_y+0.2, LAUNCHER_CONS.barrier_depth);
         this.playField.add(barrier);
         this.walls.push(barrier);
 
@@ -376,7 +376,7 @@ class PinballGame {
         this.walls.push(leftBumper);
 
         // Lower right wall
-        width = 2;
+        width = 2.3;
         height = 8;
         depth = TABLE_CONS.tableDepth;
         const lowerRightGeometry = new THREE.BoxGeometry(width, height, depth);
@@ -393,7 +393,7 @@ class PinballGame {
         this.walls.push(lowerRight);
 
         // Lower right bumper
-        height = Math.sqrt(2)*width;
+        height = Math.sqrt(2)*2.4;
         width = 0.5;
 
         const rightBumperGeometry = new THREE.BoxGeometry(width, height, depth);
@@ -408,7 +408,7 @@ class PinballGame {
 
         width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
         rightBumper.rotateZ(-Math.PI/4);
-        rightBumper.position.set(6 + width/2 - 0.81, -TABLE_CONS.tableHeight/2+8+height/2-0.6, depth-0.01);
+        rightBumper.position.set(6 + width/2 - 0.6, -TABLE_CONS.tableHeight/2+8+height/2-0.7, depth-0.01);
         this.playField.add(rightBumper);
         this.walls.push(rightBumper);
     }
