@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { OBB } from 'three/addons/math/OBB.js';
 import { 
@@ -13,6 +12,7 @@ import {
     PLAY_FIELD_CONS,
     LAUNCHER_CONS,
     VISUALIZE_BOUNDING_BOX,
+    META,
 } from './constants';
 
 let temp;
@@ -409,6 +409,7 @@ class PinballGame {
     resetGame(){
         if (this.reset) {
             this.ball.position.set(BALL_CONS.init_x, BALL_CONS.init_y, BALL_CONS.init_z);
+            // this.isLaunched = false;
         }
     }
 
@@ -485,6 +486,16 @@ class PinballGame {
             wall.obb = createOBBFromObject(wall);
             if (this.ball.obb.intersectsOBB(wall.obb)) {
                 // TODO handle wall collision logic
+                const factor = META.bounce_factor;
+                // top wall
+                if (wall.position.y > 0) {
+                    this.ballVelocity.y = -this.ballVelocity.y * factor;
+                }
+                // left or right wall
+                else if (wall.position.x < 0 || wall.position.x > 0) {
+                    this.ballVelocity.x = -this.ballVelocity.x * factor;
+                }
+                
             }
         }
     }
