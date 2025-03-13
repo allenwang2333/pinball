@@ -72,7 +72,7 @@ class PinballGame {
         // Track Game State
         this.gameStart = false;
         this.score = 0;
-        this.history = [];
+        this.history = [23, 100, 200];
         this.firstThree = {
             '1st': 0,
             '2nd': 0,
@@ -413,11 +413,22 @@ class PinballGame {
     // Display Score
     scoreBoard(){
         const board = this.gui.addFolder('Score Board');
-        board.add(this.firstThree, '1st');
-        board.add(this.firstThree, '2nd');
-        board.add(this.firstThree, '3rd');
+        board.add(this.firstThree, '1st').listen();
+        board.add(this.firstThree, '2nd').listen();
+        board.add(this.firstThree, '3rd').listen();
         board.add(this.firstThree, 'Current Score').listen();
         board.open();
+    }
+
+    // Update Score Board
+    updateScoreBoard(){
+        this.history.sort((a, b) => b - a);
+        for (let i = 0; i < Math.min(this.history.length, 3); i++) {
+            if (i === 0) this.firstThree['1st'] = this.history[i];
+            if (i === 1) this.firstThree['2nd'] = this.history[i];
+            if (i === 2) this.firstThree['3rd'] = this.history[i];
+        }
+        this.firstThree['Current Score'] = this.score;
     }
 
     createButtons(){
@@ -517,6 +528,7 @@ class PinballGame {
             this.isAttachedToLauncher = true;
             this.previousHoldingLauncher = false;
             this.score = 0;
+            this.reset = false;
         }
     }
 
@@ -615,6 +627,15 @@ class PinballGame {
         }
     }
 
+    checkGameState(){
+        const ballPos = new THREE.Vector3();
+        this.ball.getWorldPosition(ballPos);
+        if(ballPos.y < -TABLE_CONS.tableHeight/2) {
+            this.reset = true;
+            this.history.push(this.score);
+        }
+    }
+
     onWindowResize(){
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
@@ -635,16 +656,20 @@ class PinballGame {
         //     this.handleCollision(dt);
         //     this.updatePhysics(dt);
         // }
+        // Check if Game End
+        this.checkGameState();
 
         this.updateFlippers(deltaTime);
         this.updateLauncher(deltaTime);
         this.handleCollision(deltaTime);
-
         this.updatePhysics(deltaTime );
-        
-        this.resetGame();
 
-        this.firstThree['Current Score'] = this.score;
+        // Update Score Board Before End the Game
+        this.updateScoreBoard();
+        // Reset
+        this.resetGame();
+        this.score++;
+
 
         
 
