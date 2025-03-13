@@ -42,7 +42,7 @@ export const BALL_CONS = {
     radius: 0.5,
     segments: 32,
     color: 0xffffff,
-    init_x: 9.0, 
+    init_x: 9.4, 
     init_y: -10.0,
     init_z: 1.0
 };
@@ -52,7 +52,7 @@ export const PLAY_FIELD_CONS = {
 };
 
 export const META = {
-    bounce_factor: 0.8,
+    bounce_factor: 0.9,
 };
 
 export const LAUNCHER_CONS = {
@@ -64,7 +64,7 @@ export const LAUNCHER_CONS = {
     holding_speed: 2.0,
     releasing_speed: 20,
     barrier_width: 0.5,
-    barrier_height: 20,
+    barrier_height: 10,
     barrier_depth: 1,
     max_power: 50 
 };

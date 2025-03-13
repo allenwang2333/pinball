@@ -317,18 +317,19 @@ class PinballGame {
         barrierTexture.wrapT = THREE.RepeatWrapping;
         const barrierMaterial = new THREE.MeshPhongMaterial({ map: barrierTexture });
         const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-        barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius/2 - LAUNCHER_CONS.barrier_width, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
+        barrier.position.set(BALL_CONS.init_x - BALL_CONS.radius - LAUNCHER_CONS.barrier_width/2 - 0.1, BALL_CONS.init_y, LAUNCHER_CONS.barrier_depth);
         this.playField.add(barrier);
         this.walls.push(barrier);
 
         // Corner
-        const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
+        console.log(this.walls[1].position, barrier.position);
+        const cornerGeometry = new THREE.BoxGeometry(this.walls[1].position.x - barrier.position.x - TABLE_CONS.wallWidth/2 - barrierGeometry.parameters.width/2, BALL_CONS.radius, LAUNCHER_CONS.barrier_depth);
         const cornerTexture = new THREE.TextureLoader().load('assets/wood.jpg');
         cornerTexture.wrapS = THREE.RepeatWrapping;
         cornerTexture.wrapT = THREE.RepeatWrapping;
         const cornerMaterial = new THREE.MeshPhongMaterial({ map: cornerTexture });
         const corner = new THREE.Mesh(cornerGeometry, cornerMaterial);
-        corner.position.set((TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2-TABLE_CONS.wallWidth/2-(TABLE_CONS.tableWidth/2 - barrier.position.x + LAUNCHER_CONS.barrier_width/2)/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
+        corner.position.set(barrier.position.x + barrierGeometry.parameters.width/2 + cornerGeometry.parameters.width/2, -TABLE_CONS.tableHeight/2+BALL_CONS.radius/2, LAUNCHER_CONS.barrier_depth);
         this.playField.add(corner);
         this.walls.push(corner);
     }
@@ -543,11 +544,49 @@ class PinballGame {
     handleCollision(deltaTime) {
         this.ball.obb = createOBBFromObject(this.ball);
         this.handleLauncherCollision(deltaTime);
+        this.handleBarrierCollision(deltaTime);
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
     }
 
+    handleBarrierCollision(deltaTime) {
+        for (let barrier of this.launchBarrier) {
+            barrier.obb = createOBBFromObject(barrier);
+            const collision = sphereOBBCollision(this.ball, barrier.obb);
+            
+            if (collision.collision) {
+                // Get collision normal
+                const normal = collision.normal;
+                console.log(normal);
+                
+                // Calculate reflection vector using the normal
+                const bounceFactor = META.bounce_factor;
+                
+                // Reflect velocity based on collision normal
+                // v' = v - 2(v·n)n
+                const dot = this.ballVelocity.dot(normal);
+                const reflection = this.ballVelocity.clone().sub(
+                    normal.clone().multiplyScalar(2 * dot)
+                ).multiplyScalar(bounceFactor);
+                
+                this.ballVelocity.copy(reflection);
+                
+                // Move the ball outside the collision to prevent sticking
+                // We move it slightly past the collision point along the normal
+                const pushDistance = BALL_CONS.radius - collision.distance + 0.01;
+                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+                
+                // Play a sound effect
+                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+                    const sound = new THREE.Audio(this.audioListener);
+                    sound.setBuffer(buffer);
+                    sound.setVolume(0.3);
+                    sound.play();
+                });
+            }
+        }
+    }
     handleLauncherCollision(deltaTime){
         const ballPos = new THREE.Vector3();
         this.ball.getWorldPosition(ballPos);
@@ -564,7 +603,7 @@ class PinballGame {
         }
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
-            this.ballVelocity.set(-0.1, launchPower, 0); 
+            this.ballVelocity.set(1, launchPower, 0); 
             //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
             
             this.isLaunched = true;
@@ -595,26 +634,40 @@ class PinballGame {
         
     }
 
-    handleWallCollision(deltaTime){
+    handleWallCollision(deltaTime) {
         for (let wall of this.walls) {
             wall.obb = createOBBFromObject(wall);
-            if (this.ball.obb.intersectsOBB(wall.obb)) {
-                // TODO handle wall collision logic
-                const factor = META.bounce_factor;
-                // top wall
-                if (wall.position.y > 0) {
-                    this.ballVelocity.y = -this.ballVelocity.y * factor;
-                }
-                // left or right wall
-                else if (wall.position.x < 0 || wall.position.x > 0) {
-                    this.ballVelocity.x = -this.ballVelocity.x * factor;
-                }
-                // bottom wall
-                else if (wall.position.y < 0) {
-                    console.log("in");
-                    this.ballVelocity.y = this.ballVelocity.y * factor;
-                }
+            const collision = sphereOBBCollision(this.ball, wall.obb);
+            
+            if (collision.collision) {
+                // Get collision normal
+                const normal = collision.normal;
+                console.log(normal);
                 
+                // Calculate reflection vector using the normal
+                const bounceFactor = META.bounce_factor;
+                
+                // Reflect velocity based on collision normal
+                const dot = this.ballVelocity.dot(normal);
+                const reflection = this.ballVelocity.clone().sub(
+                    normal.clone().multiplyScalar(2 * dot)
+                ).multiplyScalar(bounceFactor);
+                
+                console.log(this.ballVelocity);
+                this.ballVelocity.copy(reflection);
+                console.log(this.ballVelocity);
+                
+                // Move the ball outside the collision
+                const pushDistance = BALL_CONS.radius - collision.distance + 0.01;
+                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+                
+                // Play a sound effect for wall collision
+                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+                    const sound = new THREE.Audio(this.audioListener);
+                    sound.setBuffer(buffer);
+                    sound.setVolume(0.4);
+                    sound.play();
+                });
             }
         }
     }
@@ -681,6 +734,44 @@ class PinballGame {
     }
 }
 
+// Helper function to detect collision between sphere and OBB
+function sphereOBBCollision(sphere, obb) {
+    // Get sphere center in world space
+    const sphereCenter = new THREE.Vector3();
+    sphere.getWorldPosition(sphereCenter);
+    
+    // Transform sphere center to OBB's local space
+    const localSphereCenter = sphereCenter.clone().sub(obb.center);
+    localSphereCenter.applyMatrix3(obb.rotation);
+    
+    // Find the closest point on the OBB to the sphere center
+    const closestPoint = new THREE.Vector3(
+        Math.max(-obb.halfSize.x, Math.min(obb.halfSize.x, localSphereCenter.x)),
+        Math.max(-obb.halfSize.y, Math.min(obb.halfSize.y, localSphereCenter.y)),
+        Math.max(-obb.halfSize.z, Math.min(obb.halfSize.z, localSphereCenter.z))
+    );
+    
+    // Transform closest point back to world space
+    const worldClosestPoint = closestPoint.clone();
+    worldClosestPoint.applyMatrix3(obb.rotation.clone().transpose());
+    worldClosestPoint.add(obb.center);
+    
+    // Check if the closest point is within the sphere
+    const distance = sphereCenter.distanceTo(worldClosestPoint);
+
+    let normal = sphereCenter.clone().sub(worldClosestPoint)
+    normal.z = 0;
+    normal.normalize();
+    
+    return {
+        collision: distance <= BALL_CONS.radius,
+        distance: distance,
+        normal: normal,
+        point: worldClosestPoint
+    };
+}
+
+// Helper function to create an OBB for objects other than the ball
 function createOBBFromObject(object) {
     object.updateMatrixWorld(true);
     object.geometry.computeBoundingBox();
@@ -690,7 +781,6 @@ function createOBBFromObject(object) {
         let bboxviz = new THREE.Box3Helper(bbox, 0xffff00);
         object.add(bboxviz);
     }
-    
     
     const center = new THREE.Vector3();
     const size = new THREE.Vector3();
