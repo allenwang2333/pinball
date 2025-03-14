@@ -54,6 +54,7 @@ export const PLAY_FIELD_CONS = {
 
 export const META = {
     bounce_factor: 0.9,
+    gravity: -9.8,
 };
 
 export const LAUNCHER_CONS = {
