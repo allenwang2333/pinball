@@ -17,6 +17,7 @@ import {
     DIFFICULTY,
 } from './constants';
 import { FontLoader } from 'three/examples/jsm/Addons.js';
+import { rand } from 'three/tsl';
 
 class PinballGame {
     constructor(){
@@ -75,6 +76,10 @@ class PinballGame {
         // Ramp
         this.ramp = [];
 
+        // Wormholes
+        this.wormholes = [];
+        this.inHole = false;
+
         // Track Game State
         this.gameStart = false;
         this.score = 0;
@@ -92,8 +97,11 @@ class PinballGame {
         this.reset = false;
         this.lastTime = 0;
         this.clock = new THREE.Clock();
+
+        // Difficulty
         this.settings = {
-            difficulty: 1
+            difficulty: 1,
+            ratio: 1,
         }
         this.gui = new GUI();
 
@@ -129,8 +137,8 @@ class PinballGame {
         this.scoreBoard();
         this.createButtons();
         this.createSound();
-        this.createScoreBoard();
-        this.createBlackHole();
+        // this.createScoreBoard();
+        this.createWormholes();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -489,14 +497,21 @@ class PinballGame {
         this.arc.push(concaveBox);
     }
 
-    createBlackHole(){
-        const blackHoleGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
-        const blackHoleMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
-        const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
-        blackHole.position.set(-8, 10, 0);
-        blackHole.rotation.x = Math.PI/2;
-        this.blackHole = blackHole;
-        this.playField.add(blackHole);
+    createWormholes(){
+        const wormholeGeometry = new THREE.CylinderGeometry(1.2, 1.2, 1.2, 32);
+        const wormholeMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+        const wormhole1 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
+        wormhole1.position.set(0, 11, 0);
+        wormhole1.rotation.x = Math.PI/2;
+        this.wormholes.push(wormhole1);
+        this.playField.add(wormhole1);
+
+        const wormhole2 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
+        wormhole2.position.set(0, -5, 0);
+        wormhole2.rotation.x = Math.PI/2;
+        this.wormholes.push(wormhole2);
+        this.playField.add(wormhole2);
+
     }
 
     // Display Score
@@ -537,10 +552,8 @@ class PinballGame {
 
     createButtons(){
         const folder = this.gui.addFolder('Game Settings');
-        folder.add(this.settings, 'difficulty', 1, 5).onChange((value) => {
-            this.settings.difficulty = value;
-            console.log('Difficulty set to: ', value);
-        });
+        folder.add(this.settings, 'difficulty', 1, 5, 1).onChange().listen((value) => {
+            this.settings.difficulty = value;});
         folder.open();
     }
 
@@ -633,28 +646,53 @@ class PinballGame {
             this.previousHoldingLauncher = false;
             this.score = 0;
             this.reset = false;
+            this.settings.difficulty = 0;
+            this.settings.ratio = 1;
         }
+    }
+
+    playSound(sound = 'assets/hitball.mp3', setVolume = 0.5) {
+        this.audioLoader.load(sound, (buffer) => {
+            const sound = new THREE.Audio(this.audioListener);
+            sound.setBuffer(buffer);
+            sound.setVolume(0.5);
+            sound.play();
+        });
     }
 
     updatePhysics(delta){
         // this.ball.obb = createOBBFromObject(this.ball);
         if (this.gameStart && this.isLaunched) {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
+            if (this.ballVelocity.length() > META.maxSpeed) {
+                this.ballVelocity.normalize().multiplyScalar(Math.sqrt(META.maxSpeed**2/3));
+                console.log(this.ballVelocity);
+            }
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
         this.ballVelocity.z = 0;
-        //speed limit
-        // this.ballVelocity.x = Math.min(this.ballVelocity.x, 30);
-        // this.ballVelocity.y = Math.min(this.ballVelocity.y, 30);
-        // this.ballVelocity.x = Math.max(this.ballVelocity.x, -30); 
-        // this.ballVelocity.y = Math.max(this.ballVelocity.y, -30);
+        this.ball.position.z = BALL_CONS.init_z;
+
+        // boundary check
+        const tableWidth = TABLE_CONS.tableWidth/2 - BALL_CONS.radius - 0.1;
+        const tableHeight = TABLE_CONS.tableHeight/2 - BALL_CONS.radius - 0.1;
+        if (this.ball.position.x > tableWidth || this.ball.position.x < -tableWidth) {
+            this.ballVelocity.x = -this.ballVelocity.x;
+            this.ball.position.x = Math.max(Math.min(this.ball.position.x, tableWidth), -tableWidth);
+            this.playSound();
+        }
+
+        if (this.ball.position.y > tableHeight) {
+            this.ballVelocity.y = -this.ballVelocity.y;
+            this.ball.position.y = Math.max(Math.min(this.ball.position.y, tableHeight), -tableHeight);
+            this.playSound();
+        }
     }
 
     handleCollision(deltaTime) {
         //this.score += 1;
         this.ball.obb = createOBBFromObject(this.ball);
         this.handleLauncherCollision(deltaTime);
-        this.handleBarrierCollision(deltaTime);
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
@@ -663,6 +701,7 @@ class PinballGame {
         //this.handleLowerBumperCollision(deltaTime);
         this.handleBlackHoleCollision(deltaTime);
         this.handleRampCollision(deltaTime);
+        this.handleWormholesCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -671,9 +710,9 @@ class PinballGame {
         const velocity = this.ballVelocity.clone();
         const dot = velocity.dot(normal);
         const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(2 * dot));
-        bounceVelocity.multiplyScalar(META.bounce_factor);
+        bounceVelocity.multiplyScalar(META.bounce_factor*this.settings.ratio);
         this.ballVelocity.copy(bounceVelocity);
-        const pushDistance = BALL_CONS.radius - result.distance + 0.01;
+        const pushDistance = BALL_CONS.radius - result.distance + 0.05;
         this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
 
         // sound
@@ -683,10 +722,6 @@ class PinballGame {
             sound.setVolume(0.5);
             sound.play();
         });
-    }
-
-    handleBarrierCollision(deltaTime) {
-        
     }
 
     handleLauncherCollision(deltaTime){
@@ -713,7 +748,7 @@ class PinballGame {
         this.previousStickCollision = false; 
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
-            this.ballVelocity.set(-1, launchPower, 0); 
+            this.ballVelocity.set(0, launchPower, 0); 
             //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
             
             this.isLaunched = true;
@@ -738,7 +773,9 @@ class PinballGame {
                 this.handleBounce(result);
                 // if active increase speed
                 if (this.isRightActive) {
-                    this.ballVelocity.multiplyScalar(1.2);
+                    this.ballVelocity.multiplyScalar(1.3);
+                } else {
+                    this.ballVelocity.multiplyScalar(0.8);
                 }
             }
         }
@@ -750,7 +787,7 @@ class PinballGame {
                 this.handleBounce(result);
                 // if active increase speed
                 if (this.isLeftActive) {
-                    this.ballVelocity.multiplyScalar(1.2);
+                    this.ballVelocity.multiplyScalar(1.3);
                 }
             }
         }
@@ -797,10 +834,19 @@ class PinballGame {
 
     handleBumperCollision(deltaTime){
         for (let i = 0; i < this.bumpers.length; i++) {
-            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
-            let bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
-            let distance = ballPos.distanceTo(bumperPos);
+            const ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            const bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
+            const distance = ballPos.distanceTo(bumperPos);
             if (distance <=  BALL_CONS.radius + BUMPER_CONS.radius) {
+
+                const normal = ballPos.clone().sub(bumperPos).normalize();
+                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+                    const sound = new THREE.Audio(this.audioListener);
+                    sound.setBuffer(buffer);
+                    sound.setVolume(0.5);
+                    sound.play();
+                });
+
                 // random direction
                 let randX = Math.random();
                 let randY = Math.random();
@@ -808,11 +854,13 @@ class PinballGame {
                 randomAdder.normalize();
                 randomAdder.multiplyScalar(0.1);
                 randomAdder.z = 0;
-                console.log(randomAdder);
                 
                 this.ballVelocity = this.ballVelocity.multiplyScalar(-0.88).add(randomAdder);
-                console.log(this.ballVelocity);
-                this.ballVelocity.z = 0;
+                
+                const pushDistance = BALL_CONS.radius + BUMPER_CONS.radius - distance + 0.03;
+                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+                
+                // this.ballVelocity.z = 0;
                 this.score += 1;
             }
             //console.log(this.ballVelocity);
@@ -821,31 +869,28 @@ class PinballGame {
     }
 
     handleSpeedBumperCollision(delta){
-        // Acceler
-        // ate the ball at certain direction
-        // Left Speedbumper
-        //console.log(this.ballVelocity);
-        const leftBump = this.speedBumps[0];
-        leftBump.obb = createOBBFromObject(leftBump);
-        if (this.ball.obb.intersectsOBB(leftBump.obb)) {
-            const acceleration = SPEED_BUMPER_CONS.acceleration;
-            const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
-            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
-            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
-            //console.log(this.ballVelocity);
-            this.ballVelocity.z = 0;
-        }
-        
+        // accelerate the ball once it hits the speed bump
+        for (let i = 0; i < this.speedBumps.length; i++) {
+            const bumper = this.speedBumps[i];
+            if (bumper.userData.hasCollide) {
+                continue;
+            }
 
-        // Right Speedbumper
-        const rightBump = this.speedBumps[1];
-        rightBump.obb = createOBBFromObject(rightBump);
-        if (this.ball.obb.intersectsOBB(rightBump.obb)) {
-            const acceleration = SPEED_BUMPER_CONS.acceleration;
-            const vecX = acceleration*Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
-            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
-            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
-            this.ballVelocity.z = 0;
+            bumper.obb = createOBBFromObject(bumper);
+            if (this.ball.obb.intersectsOBB(bumper.obb)) {
+                const result = sphereCollision(this.ball, bumper);
+                if (result.collision) {
+                    this.ballVelocity.multiplyScalar(SPEED_BUMPER_CONS.speed_factor);
+                    //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+                    this.score += 1;
+
+                    bumper.userData.hasCollide = true;
+                    this.playSound('assets/sword.mp3', 1);
+                    setTimeout(() => {
+                        bumper.userData.hasCollide = false;
+                    }, 1000);
+                }
+            }
         }
     }
 
@@ -862,20 +907,30 @@ class PinballGame {
         }
     }
 
-    handleBlackHoleCollision(delta){
-        let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
-        let blackHolePos = new THREE.Vector3(this.blackHole.position.x, this.blackHole.position.y, 0);
-        let distance = ballPos.distanceTo(blackHolePos);
-        if (distance <= 1.5) {
-            
-            let randomX = Math.random();
-            let randomY = Math.random();
-            let randomVX = Math.random();
-            let randomVY = Math.random();
-            this.ball.position.set(-4 + randomX*3, -1  +  randomY*3, 1);
-            this.ballVelocity.set(randomVX*3, randomVY*3, 1);
-            this.score += 5;
+    handleWormholesCollision(delta){
+        for (let i = 0; i < this.wormholes.length; i++) {
+            // if hit the wormhole, teleport the ball to the other hole
+            const wormhole = this.wormholes[i];
+            const ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            const wormholePos = new THREE.Vector3(wormhole.position.x, wormhole.position.y, 0);
+            const distance = ballPos.distanceTo(wormholePos);
+            if (distance <= 1.2 && !this.inHole) {
+                // teleport to the other wormhole, speed unchanged, change direction
+                this.inHole = true;
+                const otherWormhole = this.wormholes[(i + 1) % this.wormholes.length];
+                this.ball.position.set(otherWormhole.position.x, otherWormhole.position.y, BALL_CONS.init_z);
+                const speed = this.ballVelocity.length();
+                const randomAngle = Math.random() * Math.PI * 2;
+                const randomDirection = new THREE.Vector3(Math.cos(randomAngle), Math.sin(randomAngle), 0);
+                this.ballVelocity = randomDirection.multiplyScalar(speed);
+                this.score += 5;
+                this.playSound('assets/zoom.mp3', 0.3);
+                setTimeout(() => {
+                    this.inHole = false;
+                }, 500);
+            } 
         }
+       
     }
 
     checkGameState(){
@@ -885,22 +940,30 @@ class PinballGame {
             this.reset = true;
             this.history.push(this.score);
         } else {
-            this.settings.difficulty = this.score % 200 + 1;
+            const new_difficulty = Math.min(Math.floor(this.score / 10 + 1), 5);
+            if (new_difficulty > this.settings.difficulty) {
+                this.settings.difficulty = new_difficulty;
+            } 
             switch (this.settings.difficulty){
                 case 1:
                     this.gravity.y = DIFFICULTY.level_1;
+                    this.settings.ratio = 1;
                     break;
                 case 2:
                     this.gravity.y = DIFFICULTY.level_2;
+                    this.settings.ratio = 1.05;
                     break;
                 case 3:
                     this.gravity.y = DIFFICULTY.level_3;
+                    this.settings.ratio = 1.7;
                     break;
                 case 4:
                     this.gravity.y = DIFFICULTY.level_4;
+                    this.settings.ratio = 1.19;
                     break;
                 case 5:
                     this.gravity.y = DIFFICULTY.level_5;
+                    this.settings.ratio = 1.21;
                     break;
             }
 
@@ -984,7 +1047,6 @@ function sphereCollision(sphere, obj){
     }
 }
 
-let closestPointMesh;
 function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
     // Make sure all matrices are up to date
     playField.updateMatrixWorld(true);
@@ -1033,7 +1095,7 @@ function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
         const penetrationDepth = BALL_CONS.radius - distance;
 
         // log
-        console.log("closestPoint", closestPoint, "collisionNormal", normal, "penetrationDepth", penetrationDepth);
+        // console.log("closestPoint", closestPoint, "collisionNormal", normal, "penetrationDepth", penetrationDepth);
         
         return {
             collision: true,

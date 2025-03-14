@@ -19,7 +19,7 @@ export const FLIPPER_CONS = {
     depth: 1,
     color: 0xff0000,
     init_angle: Math.PI / 6,
-    max_angle: 0,
+    max_angle: Math.PI / 12,
     speed: Math.PI*3/2,
     return_speed: Math.PI *4/3,
 };
@@ -36,7 +36,7 @@ export const SPEED_BUMPER_CONS = {
     depth: 1,
     color: 0xffff20,
     init_angle: Math.PI / 9,
-    acceleration: 20 , // m/s^2
+    speed_factor: 1.5 , // m/s^2
 };
 
 export const BALL_CONS = {
@@ -55,6 +55,7 @@ export const PLAY_FIELD_CONS = {
 export const META = {
     bounce_factor: 0.9,
     gravity: -9.8,
+    maxSpeed: 100
 };
 
 export const LAUNCHER_CONS = {
@@ -75,7 +76,7 @@ export const BOTTOM_BARRIER = {
 
 };
 
-export const VISUALIZE_BOUNDING_BOX = true;
+export const VISUALIZE_BOUNDING_BOX = false;
 
 export const DIFFICULTY = {
     level_1: -9.81,
