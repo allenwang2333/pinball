@@ -130,6 +130,7 @@ class PinballGame {
         this.createButtons();
         this.createSound();
         this.createScoreBoard();
+        this.createBlackHole();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -489,6 +490,16 @@ class PinballGame {
         this.arc.push(concaveBox);
     }
 
+    createBlackHole(){
+        const blackHoleGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
+        const blackHoleMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+        const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
+        blackHole.position.set(-8, 10, 0);
+        blackHole.rotation.x = Math.PI/2;
+        this.blackHole = blackHole;
+        this.playField.add(blackHole);
+    }
+
     // Display Score
     scoreBoard(){
         const board = this.gui.addFolder('Score Board');
@@ -650,6 +661,7 @@ class PinballGame {
         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
         this.handleRampCollision(deltaTime);
+        this.handleBlackHoleCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -846,6 +858,22 @@ class PinballGame {
                     this.handleBounce(result);
                 }
             }
+        }
+    }
+
+    handleBlackHoleCollision(delta){
+        let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+        let blackHolePos = new THREE.Vector3(this.blackHole.position.x, this.blackHole.position.y, 0);
+        let distance = ballPos.distanceTo(blackHolePos);
+        if (distance <= 1.5) {
+            
+            let randomX = Math.random();
+            let randomY = Math.random();
+            let randomVX = Math.random();
+            let randomVY = Math.random();
+            this.ball.position.set(-4 + randomX*3, -1  +  randomY*3, 1);
+            this.ballVelocity.set(randomVX*3, randomVY*3, 1);
+            this.score += 5;
         }
     }
 
