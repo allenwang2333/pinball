@@ -61,7 +61,7 @@ class PinballGame {
         this.rightFlipperBox = null;
         this.ball = null;
         this.ballVelocity = new THREE.Vector3();
-        this.gravity = new THREE.Vector3(0, -9.8, 0);
+        this.gravity = new THREE.Vector3(0, META.gravity, 0);
         this.bumpers = [];
         this.walls = [];
         this.speedBumps = [];
@@ -171,7 +171,6 @@ class PinballGame {
         this.playField.add(topWall);
         this.walls.push(topWall);
         topWall.castShadow = true;
-        console.log("top wall", topWall.position)
 
         const cornerGeometry = new THREE.BoxGeometry(TABLE_CONS.cornerWidth, TABLE_CONS.cornerHeight, TABLE_CONS.cornerDepth);
         const leftConner = new THREE.Mesh(cornerGeometry, wallMaterial);
@@ -655,7 +654,30 @@ class PinballGame {
     }
     
     handleFlipperCollision(deltaTime){
-        
+        // right flipper
+        this.rightFlipperBox.obb = createOBBFromObject(this.rightFlipperBox);
+        if (this.ball.obb.intersectsOBB(this.rightFlipperBox.obb)) {
+            const result = flipperCollisionHelper(this.ball, this.rightFlipperBox, this.rightFlipper, this.playField);
+            if (result.collision) {
+                this.handleBounce(result);
+                // if active increase speed
+                if (this.isRightActive) {
+                    this.ballVelocity.multiplyScalar(1.2);
+                }
+            }
+        }
+        // left flipper
+        this.leftFlipperBox.obb = createOBBFromObject(this.leftFlipperBox);
+        if (this.ball.obb.intersectsOBB(this.leftFlipperBox.obb)) {
+            const result = flipperCollisionHelper(this.ball, this.leftFlipperBox, this.leftFlipper, this.playField);
+            if (result.collision) {
+                this.handleBounce(result);
+                // if active increase speed
+                if (this.isLeftActive) {
+                    this.ballVelocity.multiplyScalar(1.2);
+                }
+            }
+        }
     }
 
     handleWallCollision(deltaTime) {
@@ -823,40 +845,64 @@ function sphereCollision(sphere, obj){
     }
 }
 
-// Helper function to detect collision between sphere and OBB
-function sphereOBBCollision(sphere, obb) {
-    // Get sphere center in world space
-    const sphereCenter = new THREE.Vector3();
-    sphere.getWorldPosition(sphereCenter);
+let closestPointMesh;
+function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
+    // Make sure all matrices are up to date
+    playField.updateMatrixWorld(true);
+    flipper.updateMatrixWorld(true);
+    flipperBox.updateMatrixWorld(true);
+    sphere.updateMatrixWorld(true);
     
-    // Transform sphere center to OBB's local space
-    const localSphereCenter = sphereCenter.clone().sub(obb.center);
-    localSphereCenter.applyMatrix3(obb.rotation);
+    // Get sphere's world position
+    const sphereWorldPos = new THREE.Vector3();
+    sphere.getWorldPosition(sphereWorldPos);
     
-    // Find the closest point on the OBB to the sphere center
-    const closestPoint = new THREE.Vector3(
-        Math.max(-obb.halfSize.x, Math.min(obb.halfSize.x, localSphereCenter.x)),
-        Math.max(-obb.halfSize.y, Math.min(obb.halfSize.y, localSphereCenter.y)),
-        Math.max(-obb.halfSize.z, Math.min(obb.halfSize.z, localSphereCenter.z))
+    // Transform sphere position to flipperBox's local space using the world matrix inverse
+    const flipperBoxWorldInverse = flipperBox.matrixWorld.clone().invert();
+    const localSpherePos = sphereWorldPos.clone().applyMatrix4(flipperBoxWorldInverse);
+    
+    // Get flipperBox's bounding box in its local space
+    const boxMin = flipperBox.geometry.boundingBox.min.clone();
+    const boxMax = flipperBox.geometry.boundingBox.max.clone();
+    
+    // Find closest point on the box to the sphere in local space
+    const localClosestPoint = new THREE.Vector3(
+        Math.max(boxMin.x, Math.min(localSpherePos.x, boxMax.x)),
+        Math.max(boxMin.y, Math.min(localSpherePos.y, boxMax.y)),
+        Math.max(boxMin.z, Math.min(localSpherePos.z, boxMax.z))
     );
     
-    // Transform closest point back to world space
-    const worldClosestPoint = closestPoint.clone();
-    worldClosestPoint.applyMatrix3(obb.rotation.clone().transpose());
-    worldClosestPoint.add(obb.center);
-    
-    // Check if the closest point is within the sphere
-    const distance = sphereCenter.distanceTo(worldClosestPoint);
+    // Calculate distance in local space
+    const distance = localSpherePos.distanceTo(localClosestPoint);
+    const isColliding = distance <= BALL_CONS.radius;
 
-    let normal = sphereCenter.clone().sub(worldClosestPoint)
-    normal.z = 0;
-    normal.normalize();
+    // log
+    // console.log("localSpherePos", localSpherePos, "localClosestPoint", localClosestPoint, "distance", distance, "isColliding", isColliding);
+    
+    if (isColliding) {
+        // transform closest point to playField's local space
+        const playFieldWorldInverse = playField.matrixWorld.clone().invert();
+        const closestPoint = localClosestPoint.clone().applyMatrix4(flipperBox.matrixWorld).applyMatrix4(playFieldWorldInverse);
+        
+        // calculate the normal in playField's local space
+        const normal = sphere.position.clone().sub(closestPoint).normalize();
+        
+        // Calculate penetration depth
+        const penetrationDepth = BALL_CONS.radius - distance;
+
+        // log
+        console.log("closestPoint", closestPoint, "collisionNormal", normal, "penetrationDepth", penetrationDepth);
+        
+        return {
+            collision: true,
+            normal: normal,
+            distance: distance,
+            point: closestPoint
+        };
+    }
     
     return {
-        collision: distance <= BALL_CONS.radius,
-        distance: distance,
-        normal: normal,
-        point: worldClosestPoint
+        collision: false
     };
 }
 
