@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { OBB } from 'three/addons/math/OBB.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { 
     TABLE_CONS, 
     FLIPPER_CONS, 
@@ -14,6 +15,7 @@ import {
     VISUALIZE_BOUNDING_BOX,
     META,
 } from './constants';
+import { FontLoader } from 'three/examples/jsm/Addons.js';
 
 class PinballGame {
     constructor(){
@@ -108,6 +110,8 @@ class PinballGame {
         this.audioListener = null;
         this.audioLoader = null;
         this.sound = null;
+        this.fontLoader = null;
+        this.textGeometry = null;
         this.init();
         
     }
@@ -124,14 +128,38 @@ class PinballGame {
         this.scoreBoard();
         this.createButtons();
         this.createSound();
+        this.createScoreBoard();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
         document.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('resize', this.onWindowResize, false);
         this.animate();
-    
         
+        
+    }
+
+    createScoreBoard() {
+        
+        this.fontLoader = new FontLoader();
+        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+                font: font,
+		        size: 2,
+		        depth: 0.5,
+		        curveSegments: 12,
+            });
+            this.textGeometry = textGeometry;
+            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const scoreBoardMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const scoreBoardGeometry = new THREE.BoxGeometry(20, 5, 0);
+            const scoreBoardBackGround = new THREE.Mesh(scoreBoardGeometry, scoreBoardMaterial);
+            scoreBoardBackGround.position.set(0, 16, 0);
+            this.scene.add(scoreBoardBackGround);
+            this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
+            this.scoreBoard.position.set(-5, 15, 0);
+            this.scene.add(this.scoreBoard);
+        });
     }
 
     createTable(){
@@ -476,6 +504,21 @@ class PinballGame {
             if (i === 2) this.firstThree['3rd'] = this.history[i];
         }
         this.firstThree['Current Score'] = this.score;
+
+        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+                font: font,
+		        size: 2,
+		        depth: 0.5,
+		        curveSegments: 12,
+            });
+            this.textGeometry = textGeometry;
+            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
+            this.scoreBoard.position.set(-7, 15, 0);
+            this.scene.children[4] = this.scoreBoard;
+            console.log(this.scene.children);
+        });
     }
 
     createButtons(){
@@ -588,6 +631,7 @@ class PinballGame {
     }
 
     handleCollision(deltaTime) {
+        //this.score += 1;
         this.ball.obb = createOBBFromObject(this.ball);
         this.handleLauncherCollision(deltaTime);
         this.handleBarrierCollision(deltaTime);
