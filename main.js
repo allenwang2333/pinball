@@ -498,16 +498,16 @@ class PinballGame {
     }
 
     createWormholes(){
-        const wormholeGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
+        const wormholeGeometry = new THREE.CylinderGeometry(1.2, 1.2, 1.2, 32);
         const wormholeMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
         const wormhole1 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
-        wormhole1.position.set(-3, 12, 0);
+        wormhole1.position.set(0, 11, 0);
         wormhole1.rotation.x = Math.PI/2;
         this.wormholes.push(wormhole1);
         this.playField.add(wormhole1);
 
         const wormhole2 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
-        wormhole2.position.set(5, 3, 0);
+        wormhole2.position.set(0, -5, 0);
         wormhole2.rotation.x = Math.PI/2;
         this.wormholes.push(wormhole2);
         this.playField.add(wormhole2);
@@ -650,6 +650,15 @@ class PinballGame {
         }
     }
 
+    playSound(sound = 'assets/hitball.mp3', setVolume = 0.5) {
+        this.audioLoader.load(sound, (buffer) => {
+            const sound = new THREE.Audio(this.audioListener);
+            sound.setBuffer(buffer);
+            sound.setVolume(0.5);
+            sound.play();
+        });
+    }
+
     updatePhysics(delta){
         // this.ball.obb = createOBBFromObject(this.ball);
         if (this.gameStart && this.isLaunched) {
@@ -664,23 +673,19 @@ class PinballGame {
         this.ball.position.z = BALL_CONS.init_z;
 
         // boundary check
-        const tableWidth = TABLE_CONS.tableWidth/2 - BALL_CONS.radius;
-        const tableHeight = TABLE_CONS.tableHeight/2 - BALL_CONS.radius;
+        const tableWidth = TABLE_CONS.tableWidth/2 - BALL_CONS.radius - 0.1;
+        const tableHeight = TABLE_CONS.tableHeight/2 - BALL_CONS.radius - 0.1;
         if (this.ball.position.x > tableWidth || this.ball.position.x < -tableWidth) {
             this.ballVelocity.x = -this.ballVelocity.x;
             this.ball.position.x = Math.max(Math.min(this.ball.position.x, tableWidth), -tableWidth);
+            this.playSound();
         }
 
-        if (this.ball.position.y > tableHeight || this.ball.position.y < -tableHeight) {
+        if (this.ball.position.y > tableHeight) {
             this.ballVelocity.y = -this.ballVelocity.y;
             this.ball.position.y = Math.max(Math.min(this.ball.position.y, tableHeight), -tableHeight);
+            this.playSound();
         }
-
-        //speed limit
-        // this.ballVelocity.x = Math.min(this.ballVelocity.x, 30);
-        // this.ballVelocity.y = Math.min(this.ballVelocity.y, 30);
-        // this.ballVelocity.x = Math.max(this.ballVelocity.x, -30); 
-        // this.ballVelocity.y = Math.max(this.ballVelocity.y, -30);
     }
 
     handleCollision(deltaTime) {
@@ -740,7 +745,7 @@ class PinballGame {
         this.previousStickCollision = false; 
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
-            this.ballVelocity.set(-1, launchPower, 0); 
+            this.ballVelocity.set(0, launchPower, 0); 
             //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(deltaTime));
             
             this.isLaunched = true;
@@ -765,7 +770,9 @@ class PinballGame {
                 this.handleBounce(result);
                 // if active increase speed
                 if (this.isRightActive) {
-                    this.ballVelocity.multiplyScalar(1.2);
+                    this.ballVelocity.multiplyScalar(1.3);
+                } else {
+                    this.ballVelocity.multiplyScalar(0.8);
                 }
             }
         }
@@ -777,7 +784,7 @@ class PinballGame {
                 this.handleBounce(result);
                 // if active increase speed
                 if (this.isLeftActive) {
-                    this.ballVelocity.multiplyScalar(1.2);
+                    this.ballVelocity.multiplyScalar(1.3);
                 }
             }
         }
@@ -875,6 +882,7 @@ class PinballGame {
                     this.score += 1;
 
                     bumper.userData.hasCollide = true;
+                    this.playSound('assets/sword.mp3', 1);
                     setTimeout(() => {
                         bumper.userData.hasCollide = false;
                     }, 1000);
@@ -903,7 +911,7 @@ class PinballGame {
             const ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
             const wormholePos = new THREE.Vector3(wormhole.position.x, wormhole.position.y, 0);
             const distance = ballPos.distanceTo(wormholePos);
-            if (distance <= 1.5 && !this.inHole) {
+            if (distance <= 1.2 && !this.inHole) {
                 // teleport to the other wormhole, speed unchanged, change direction
                 this.inHole = true;
                 const otherWormhole = this.wormholes[(i + 1) % this.wormholes.length];
@@ -913,6 +921,7 @@ class PinballGame {
                 const randomDirection = new THREE.Vector3(Math.cos(randomAngle), Math.sin(randomAngle), 0);
                 this.ballVelocity = randomDirection.multiplyScalar(speed);
                 this.score += 5;
+                this.playSound('assets/zoom.mp3', 0.3);
                 setTimeout(() => {
                     this.inHole = false;
                 }, 500);
