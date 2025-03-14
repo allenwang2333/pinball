@@ -137,7 +137,7 @@ class PinballGame {
         this.scoreBoard();
         this.createButtons();
         this.createSound();
-        // this.createScoreBoard();
+        this.createScoreBoard();
         this.createWormholes();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
@@ -698,8 +698,6 @@ class PinballGame {
         this.handleWallCollision(deltaTime);
         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
-        //this.handleLowerBumperCollision(deltaTime);
-        this.handleBlackHoleCollision(deltaTime);
         this.handleRampCollision(deltaTime);
         this.handleWormholesCollision(deltaTime);
     }
