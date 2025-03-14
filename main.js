@@ -17,7 +17,6 @@ import {
     DIFFICULTY,
 } from './constants';
 import { FontLoader } from 'three/examples/jsm/Addons.js';
-import { rand } from 'three/tsl';
 
 class PinballGame {
     constructor(){
@@ -518,21 +517,22 @@ class PinballGame {
             if (i === 1) this.firstThree['2nd'] = this.history[i];
             if (i === 2) this.firstThree['3rd'] = this.history[i];
         }
+        let oldScore = this.firstThree['Current Score'];
         this.firstThree['Current Score'] = this.score;
-
-        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
-            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
-                font: font,
-		        size: 2,
-		        depth: 0.5,
-		        curveSegments: 12,
+        if (oldScore !== this.score) {
+            this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+                let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+                    font: font,
+                    size: 2,
+                    depth: 0.5,
+                    curveSegments: 12,
+                });
+                this.scoreBoard.geometry = null;
+                this.scoreBoard.geometry = textGeometry;
+                textGeometry = null;
             });
-            this.textGeometry = textGeometry;
-            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            this.scoreBoard.geometry = textGeometry;
-            //this.scoreBoard.position.set(-7, 15, 0);
-            //this.scene.children[4] = this.scoreBoard;
-        });
+        }
+        
     }
 
     createButtons(){
