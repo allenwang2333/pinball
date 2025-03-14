@@ -152,7 +152,6 @@ class PinballGame {
 		        depth: 0.5,
 		        curveSegments: 12,
             });
-            this.textGeometry = textGeometry;
             const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
             const scoreBoardMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
             const scoreBoardGeometry = new THREE.BoxGeometry(20, 5, 0);
@@ -530,9 +529,9 @@ class PinballGame {
             });
             this.textGeometry = textGeometry;
             const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
-            this.scoreBoard.position.set(-7, 15, 0);
-            this.scene.children[4] = this.scoreBoard;
+            this.scoreBoard.geometry = textGeometry;
+            //this.scoreBoard.position.set(-7, 15, 0);
+            //this.scene.children[4] = this.scoreBoard;
         });
     }
 
@@ -661,7 +660,7 @@ class PinballGame {
         this.handleWallCollision(deltaTime);
         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
-        this.handleLowerBumperCollision(deltaTime);
+        //this.handleLowerBumperCollision(deltaTime);
         this.handleBlackHoleCollision(deltaTime);
         this.handleRampCollision(deltaTime);
     }
