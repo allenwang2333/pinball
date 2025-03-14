@@ -19,7 +19,7 @@ export const FLIPPER_CONS = {
     depth: 1,
     color: 0xff0000,
     init_angle: Math.PI / 6,
-    max_angle: 0,
+    max_angle: Math.PI / 12,
     speed: Math.PI*3/2,
     return_speed: Math.PI *4/3,
 };
@@ -75,7 +75,7 @@ export const BOTTOM_BARRIER = {
 
 };
 
-export const VISUALIZE_BOUNDING_BOX = true;
+export const VISUALIZE_BOUNDING_BOX = false;
 
 export const DIFFICULTY = {
     level_1: -9.81,

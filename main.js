@@ -76,6 +76,9 @@ class PinballGame {
         // Ramp
         this.ramp = [];
 
+        // Wormholes
+        this.wormholes = [];
+
         // Track Game State
         this.gameStart = false;
         this.score = 0;
@@ -130,8 +133,8 @@ class PinballGame {
         this.scoreBoard();
         this.createButtons();
         this.createSound();
-        this.createScoreBoard();
-        this.createBlackHole();
+        // this.createScoreBoard();
+        this.createWarmholes();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -490,7 +493,7 @@ class PinballGame {
         this.arc.push(concaveBox);
     }
 
-    createBlackHole(){
+    createWarmholes(){
         const blackHoleGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
         const blackHoleMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
         const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
@@ -520,19 +523,19 @@ class PinballGame {
         }
         this.firstThree['Current Score'] = this.score;
 
-        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
-            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
-                font: font,
-		        size: 2,
-		        depth: 0.5,
-		        curveSegments: 12,
-            });
-            this.textGeometry = textGeometry;
-            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            this.scoreBoard.geometry = textGeometry;
-            //this.scoreBoard.position.set(-7, 15, 0);
-            //this.scene.children[4] = this.scoreBoard;
-        });
+        // this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+        //     let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+        //         font: font,
+		//         size: 2,
+		//         depth: 0.5,
+		//         curveSegments: 12,
+        //     });
+        //     this.textGeometry = textGeometry;
+        //     const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        //     this.scoreBoard.geometry = textGeometry;
+        //     //this.scoreBoard.position.set(-7, 15, 0);
+        //     //this.scene.children[4] = this.scoreBoard;
+        // });
     }
 
     createButtons(){
@@ -672,7 +675,7 @@ class PinballGame {
         const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(2 * dot));
         bounceVelocity.multiplyScalar(META.bounce_factor);
         this.ballVelocity.copy(bounceVelocity);
-        const pushDistance = BALL_CONS.radius - result.distance + 0.01;
+        const pushDistance = BALL_CONS.radius - result.distance + 0.05;
         this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
 
         // sound
@@ -796,10 +799,19 @@ class PinballGame {
 
     handleBumperCollision(deltaTime){
         for (let i = 0; i < this.bumpers.length; i++) {
-            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
-            let bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
-            let distance = ballPos.distanceTo(bumperPos);
+            const ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            const bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
+            const distance = ballPos.distanceTo(bumperPos);
             if (distance <=  BALL_CONS.radius + BUMPER_CONS.radius) {
+
+                const normal = ballPos.clone().sub(bumperPos).normalize();
+                this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+                    const sound = new THREE.Audio(this.audioListener);
+                    sound.setBuffer(buffer);
+                    sound.setVolume(0.5);
+                    sound.play();
+                });
+
                 // random direction
                 let randX = Math.random();
                 let randY = Math.random();
@@ -807,11 +819,14 @@ class PinballGame {
                 randomAdder.normalize();
                 randomAdder.multiplyScalar(0.1);
                 randomAdder.z = 0;
-                console.log(randomAdder);
                 
                 this.ballVelocity = this.ballVelocity.multiplyScalar(-0.88).add(randomAdder);
+                
+                const pushDistance = BALL_CONS.radius + BUMPER_CONS.radius - distance + 0.05;
+                this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+                
                 console.log(this.ballVelocity);
-                this.ballVelocity.z = 0;
+                // this.ballVelocity.z = 0;
                 this.score += 1;
             }
             //console.log(this.ballVelocity);
@@ -866,13 +881,13 @@ class PinballGame {
         let blackHolePos = new THREE.Vector3(this.blackHole.position.x, this.blackHole.position.y, 0);
         let distance = ballPos.distanceTo(blackHolePos);
         if (distance <= 1.5) {
-            
-            let randomX = Math.random();
-            let randomY = Math.random();
-            let randomVX = Math.random();
-            let randomVY = Math.random();
-            this.ball.position.set(-4 + randomX*3, -1  +  randomY*3, 1);
-            this.ballVelocity.set(randomVX*3, randomVY*3, 1);
+            // set in random position on table
+            this.ball.position.set(Math.random() * 10 - 5, Math.random() * 10 - 5, BALL_CONS.init_z);
+            // keep the speed but change the direction
+            const speed = this.ballVelocity.length();
+            const randomAngle = Math.random() * Math.PI * 2;
+            const randomDirection = new THREE.Vector3(Math.cos(randomAngle), Math.sin(randomAngle), 0);
+            this.ballVelocity = randomDirection.multiplyScalar(speed);
             this.score += 5;
         }
     }
