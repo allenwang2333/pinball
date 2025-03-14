@@ -13,6 +13,7 @@ import {
     LAUNCHER_CONS,
     VISUALIZE_BOUNDING_BOX,
     META,
+    DIFFICULTY,
 } from './constants';
 
 class PinballGame {
@@ -796,6 +797,26 @@ class PinballGame {
         if(ballPos.y < -TABLE_CONS.tableHeight/2) {
             this.reset = true;
             this.history.push(this.score);
+        } else {
+            this.settings.difficulty = this.score % 200 + 1;
+            switch (this.settings.difficulty){
+                case 1:
+                    this.gravity.y = DIFFICULTY.level_1;
+                    break;
+                case 2:
+                    this.gravity.y = DIFFICULTY.level_2;
+                    break;
+                case 3:
+                    this.gravity.y = DIFFICULTY.level_3;
+                    break;
+                case 4:
+                    this.gravity.y = DIFFICULTY.level_4;
+                    break;
+                case 5:
+                    this.gravity.y = DIFFICULTY.level_5;
+                    break;
+            }
+
         }
     }
 
@@ -832,7 +853,7 @@ class PinballGame {
         // Reset
         this.resetGame();
 
-
+        this.score++;
         
 
         // Update Phong shading matterial
