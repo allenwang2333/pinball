@@ -73,8 +73,8 @@ class PinballGame {
         // Arch
         this.arc = [];
 
-        // Lower reflector
-        this.lowerBumper = [];
+        // Ramp
+        this.ramp = [];
 
         // Track Game State
         this.gameStart = false;
@@ -125,7 +125,7 @@ class PinballGame {
         this.createSpeedBump();
         this.createBall();
         this.createLauncher();
-        this.createBottom();
+        this.createRamp();
         this.createArch();
         this.scoreBoard();
         this.createButtons();
@@ -226,6 +226,40 @@ class PinballGame {
             (TABLE_CONS.wallDepth-TABLE_CONS.tableDepth)/2
         );
         this.playField.add(rightConner);
+
+        // Lower left wall
+        let width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
+        let height = 8;
+        let depth = TABLE_CONS.tableDepth;
+        const lowerLeftGeometry = new THREE.BoxGeometry(width, height, depth);
+        const lowerLeftTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        lowerLeftTexture.wrapS = THREE.RepeatWrapping;
+        lowerLeftTexture.wrapT = THREE.RepeatWrapping;
+        const lowerLeftMaterial = new THREE.MeshPhongMaterial({ map: lowerLeftTexture });
+        const lowerLeft = new THREE.Mesh(lowerLeftGeometry, lowerLeftMaterial);
+        // Shadow
+        lowerLeft.castShadow = true;
+
+        lowerLeft.position.set(-6 - width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+        this.playField.add(lowerLeft);
+        this.walls.push(lowerLeft);
+
+         // Lower right wall
+         width = 2.3;
+         height = 8;
+         depth = TABLE_CONS.tableDepth;
+         const lowerRightGeometry = new THREE.BoxGeometry(width, height, depth);
+         const lowerRightTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+         lowerRightTexture.wrapS = THREE.RepeatWrapping;
+         lowerRightTexture.wrapT = THREE.RepeatWrapping;
+         const lowerRightMaterial = new THREE.MeshPhongMaterial({ map: lowerRightTexture });
+         const lowerRight = new THREE.Mesh(lowerRightGeometry, lowerRightMaterial);
+         // Shadow
+         lowerRight.castShadow = true;
+ 
+         lowerRight.position.set(6 + width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
+         this.playField.add(lowerRight);
+         this.walls.push(lowerRight);
     }
 
     createFlippers(){
@@ -371,80 +405,49 @@ class PinballGame {
     }
 
     // Build the bottom part of the board
-    createBottom(){
-        // Lower left wall
+    createRamp(){
         let width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
         let height = 8;
         let depth = TABLE_CONS.tableDepth;
-        const lowerLeftGeometry = new THREE.BoxGeometry(width, height, depth);
-        const lowerLeftTexture = new THREE.TextureLoader().load('assets/wood.jpg');
-        lowerLeftTexture.wrapS = THREE.RepeatWrapping;
-        lowerLeftTexture.wrapT = THREE.RepeatWrapping;
-        const lowerLeftMaterial = new THREE.MeshPhongMaterial({ map: lowerLeftTexture });
-        const lowerLeft = new THREE.Mesh(lowerLeftGeometry, lowerLeftMaterial);
-        // Shadow
-        lowerLeft.castShadow = true;
-
-        lowerLeft.position.set(-6 - width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
-        this.playField.add(lowerLeft);
-        this.walls.push(lowerLeft);
-
-        // Lower left bumper
+        // left ramp
         height = Math.sqrt(2)*width;
         width = 1;
 
-        const leftBumperGeometry = new THREE.BoxGeometry(width, height, depth);
-        const leftBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
-        leftBumperTexture.wrapS = THREE.RepeatWrapping;
-        leftBumperTexture.wrapT = THREE.RepeatWrapping;
-        const leftBumperMaterial = new THREE.MeshStandardMaterial({ map: leftBumperTexture });
-        const leftBumper = new THREE.Mesh(leftBumperGeometry, leftBumperMaterial);
+        const leftRampGeometry = new THREE.BoxGeometry(width, height, depth);
+        const leftRampTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        leftRampTexture.wrapS = THREE.RepeatWrapping;
+        leftRampTexture.wrapT = THREE.RepeatWrapping;
+        const leftRampMaterial = new THREE.MeshStandardMaterial({ map: leftRampTexture });
+        const leftRamp = new THREE.Mesh(leftRampGeometry, leftRampMaterial);
 
         // Shadow
-        leftBumper.castShadow = true;
+        leftRamp.castShadow = true;
 
         width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
-        leftBumper.rotateZ(Math.PI/4);
-        leftBumper.position.set(-6 - width/2-0.3, -TABLE_CONS.tableHeight/2+8+height/2-1.2, depth-0.01);
-        this.playField.add(leftBumper);
-        this.lowerBumper.push(leftBumper);
+        leftRamp.rotateZ(Math.PI/4);
+        leftRamp.position.set(-6 - width/2-0.3, -TABLE_CONS.tableHeight/2+8+height/2-1.2, depth-0.01);
+        this.playField.add(leftRamp);
+        this.ramp.push(leftRamp);
 
-        // Lower right wall
-        width = 2.3;
-        height = 8;
-        depth = TABLE_CONS.tableDepth;
-        const lowerRightGeometry = new THREE.BoxGeometry(width, height, depth);
-        const lowerRightTexture = new THREE.TextureLoader().load('assets/wood.jpg');
-        lowerRightTexture.wrapS = THREE.RepeatWrapping;
-        lowerRightTexture.wrapT = THREE.RepeatWrapping;
-        const lowerRightMaterial = new THREE.MeshPhongMaterial({ map: lowerRightTexture });
-        const lowerRight = new THREE.Mesh(lowerRightGeometry, lowerRightMaterial);
-        // Shadow
-        lowerRight.castShadow = true;
-
-        lowerRight.position.set(6 + width/2, -TABLE_CONS.tableHeight/2+height/2, depth);
-        this.playField.add(lowerRight);
-        this.walls.push(lowerRight);
-
-        // Lower right bumper
+        // right ramp
         height = Math.sqrt(2)*2.4;
         width = 0.5;
 
-        const rightBumperGeometry = new THREE.BoxGeometry(width, height, depth);
-        const rightBumperTexture = new THREE.TextureLoader().load('assets/wood.jpg');
-        rightBumperTexture.wrapS = THREE.RepeatWrapping;
-        rightBumperTexture.wrapT = THREE.RepeatWrapping;
-        const rightBumperMaterial = new THREE.MeshStandardMaterial({ map: rightBumperTexture });
-        const rightBumper = new THREE.Mesh(rightBumperGeometry, rightBumperMaterial);
+        const rightRampGeometry = new THREE.BoxGeometry(width, height, depth);
+        const rightRampTexture = new THREE.TextureLoader().load('assets/wood.jpg');
+        rightRampTexture.wrapS = THREE.RepeatWrapping;
+        rightRampTexture.wrapT = THREE.RepeatWrapping;
+        const rightRampMaterial = new THREE.MeshStandardMaterial({ map: rightRampTexture });
+        const rightRamp = new THREE.Mesh(rightRampGeometry, rightRampMaterial);
 
         // Shadow
-        rightBumper.castShadow = true;
+        rightRamp.castShadow = true;
 
         width = -6.5 + (TABLE_CONS.tableWidth+TABLE_CONS.wallWidth)/2;
-        rightBumper.rotateZ(-Math.PI/4);
-        rightBumper.position.set(6 + width/2 - 0.6, -TABLE_CONS.tableHeight/2+8+height/2-0.7, depth-0.01);
-        this.playField.add(rightBumper);
-        this.lowerBumper.push(rightBumper);
+        rightRamp.rotateZ(-Math.PI/4);
+        rightRamp.position.set(6 + width/2 - 0.6, -TABLE_CONS.tableHeight/2+8+height/2-0.7, depth-0.01);
+        this.playField.add(rightRamp);
+        this.ramp.push(rightRamp);
     }
 
     // Create Arch
@@ -660,6 +663,7 @@ class PinballGame {
         this.handleSpeedBumperCollision(deltaTime);
         this.handleLowerBumperCollision(deltaTime);
         this.handleBlackHoleCollision(deltaTime);
+        this.handleRampCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -672,6 +676,14 @@ class PinballGame {
         this.ballVelocity.copy(bounceVelocity);
         const pushDistance = BALL_CONS.radius - result.distance + 0.01;
         this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
+
+        // sound
+        this.audioLoader.load('assets/hitball.mp3', (buffer) => {
+            const sound = new THREE.Audio(this.audioListener);
+            sound.setBuffer(buffer);
+            sound.setVolume(0.5);
+            sound.play();
+        });
     }
 
     handleBarrierCollision(deltaTime) {
@@ -838,43 +850,17 @@ class PinballGame {
         }
     }
 
-    handleLowerBumperCollision(delta){
-        // Left bumper
-        const left = this.lowerBumper[0];
-        left.obb = createOBBFromObject(left);
-        if (this.ball.obb.intersectsOBB(left.obb)) {
-            const result = sphereCollision(this.ball, left);
-            if (result.collision) {
-                this.handleLowerBumperBounce(result, true);
+    handleRampCollision(delta){
+        for (let i = 0; i < this.ramp.length; i++) {
+            const ramp = this.ramp[i];
+            ramp.obb = createOBBFromObject(ramp);
+            if (this.ball.obb.intersectsOBB(ramp.obb)) {
+                const result = rampCollisionHelper(this.ball, ramp, this.playField);
+                if (result.collision) {
+                    this.handleBounce(result);
+                }
             }
         }
-
-        // Right bumper
-        const right = this.lowerBumper[1];
-        right.obb = createOBBFromObject(right);
-        if (this.ball.obb.intersectsOBB(right.obb)) {
-            const result = sphereCollision(this.ball, right);
-            if (result.collision) {
-                this.handleLowerBumperBounce(result, false);
-            }
-        }
-    }
-
-    handleLowerBumperBounce(result, isLeft){
-        // Each bumper rotate by 45 degrees
-        let normal;
-        if(isLeft) {
-            normal = new THREE.Vector3(1, -1, 0).normalize();
-        } else {
-            normal = new THREE.Vector3(-1, 1, 0).normalize();
-        }
-        const velocity = this.ballVelocity.clone();
-        const dot = velocity.dot(normal);
-        const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(1.5 * dot));
-        bounceVelocity.multiplyScalar(META.bounce_factor);
-        this.ballVelocity.copy(bounceVelocity);
-        const pushDistance = BALL_CONS.radius - result.distance + 0.01;
-        this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
     }
 
     handleBlackHoleCollision(delta){
@@ -1040,6 +1026,9 @@ function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
         
         // calculate the normal in playField's local space
         const normal = sphere.position.clone().sub(closestPoint).normalize();
+        // set z component to 0
+        normal.z = 0;
+        normal.normalize();
         
         // Calculate penetration depth
         const penetrationDepth = BALL_CONS.radius - distance;
@@ -1058,6 +1047,36 @@ function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
     return {
         collision: false
     };
+}
+
+function rampCollisionHelper(sphere, ramp, playField){
+    const sphereWorldPos = new THREE.Vector3();
+    sphere.getWorldPosition(sphereWorldPos);
+    const rampWorldInverse = ramp.matrixWorld.clone().invert();
+    const localSpherePos = sphereWorldPos.clone().applyMatrix4(rampWorldInverse);
+    const boxMin = ramp.geometry.boundingBox.min.clone();
+    const boxMax = ramp.geometry.boundingBox.max.clone();
+    const localClosestPoint = new THREE.Vector3(
+        Math.max(boxMin.x, Math.min(localSpherePos.x, boxMax.x)),
+        Math.max(boxMin.y, Math.min(localSpherePos.y, boxMax.y)),
+        Math.max(boxMin.z, Math.min(localSpherePos.z, boxMax.z))
+    );
+    const distance = localSpherePos.distanceTo(localClosestPoint);
+    const isColliding = distance <= BALL_CONS.radius;
+    if (isColliding) {
+        const closestPoint = localClosestPoint.clone().applyMatrix4(ramp.matrixWorld).applyMatrix4(playField.matrixWorld.clone().invert());
+        const normal = sphere.position.clone().sub(closestPoint).normalize();
+        return {
+            collision: true,
+            normal: normal,
+            distance: distance,
+            point: closestPoint
+        };
+    }
+        
+    return {
+        collision: false,
+    }
 }
 
 // Helper function to create an OBB for objects other than the ball
