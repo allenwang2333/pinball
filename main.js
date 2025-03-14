@@ -78,6 +78,7 @@ class PinballGame {
 
         // Wormholes
         this.wormholes = [];
+        this.inHole = false;
 
         // Track Game State
         this.gameStart = false;
@@ -137,7 +138,7 @@ class PinballGame {
         this.createButtons();
         this.createSound();
         // this.createScoreBoard();
-        this.createWarmholes();
+        this.createWormholes();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -496,14 +497,21 @@ class PinballGame {
         this.arc.push(concaveBox);
     }
 
-    createWarmholes(){
-        const blackHoleGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
-        const blackHoleMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
-        const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial);
-        blackHole.position.set(-8, 10, 0);
-        blackHole.rotation.x = Math.PI/2;
-        this.blackHole = blackHole;
-        this.playField.add(blackHole);
+    createWormholes(){
+        const wormholeGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
+        const wormholeMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+        const wormhole1 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
+        wormhole1.position.set(-3, 12, 0);
+        wormhole1.rotation.x = Math.PI/2;
+        this.wormholes.push(wormhole1);
+        this.playField.add(wormhole1);
+
+        const wormhole2 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
+        wormhole2.position.set(5, 3, 0);
+        wormhole2.rotation.x = Math.PI/2;
+        this.wormholes.push(wormhole2);
+        this.playField.add(wormhole2);
+
     }
 
     // Display Score
@@ -670,7 +678,7 @@ class PinballGame {
         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
         this.handleRampCollision(deltaTime);
-        this.handleBlackHoleCollision(deltaTime);
+        this.handleWormholesCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -839,6 +847,10 @@ class PinballGame {
         // accelerate the ball once it hits the speed bump
         for (let i = 0; i < this.speedBumps.length; i++) {
             const bumper = this.speedBumps[i];
+            if (bumper.userData.hasCollide) {
+                continue;
+            }
+
             bumper.obb = createOBBFromObject(bumper);
             if (this.ball.obb.intersectsOBB(bumper.obb)) {
                 const result = sphereCollision(this.ball, bumper);
@@ -846,6 +858,11 @@ class PinballGame {
                     this.ballVelocity.multiplyScalar(SPEED_BUMPER_CONS.speed_factor);
                     //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
                     this.score += 1;
+
+                    bumper.userData.hasCollide = true;
+                    setTimeout(() => {
+                        bumper.userData.hasCollide = false;
+                    }, 1000);
                 }
             }
         }
@@ -864,20 +881,29 @@ class PinballGame {
         }
     }
 
-    handleBlackHoleCollision(delta){
-        let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
-        let blackHolePos = new THREE.Vector3(this.blackHole.position.x, this.blackHole.position.y, 0);
-        let distance = ballPos.distanceTo(blackHolePos);
-        if (distance <= 1.5) {
-            // set in random position on table
-            this.ball.position.set(Math.random() * 10 - 5, Math.random() * 10 - 5, BALL_CONS.init_z);
-            // keep the speed but change the direction
-            const speed = this.ballVelocity.length();
-            const randomAngle = Math.random() * Math.PI * 2;
-            const randomDirection = new THREE.Vector3(Math.cos(randomAngle), Math.sin(randomAngle), 0);
-            this.ballVelocity = randomDirection.multiplyScalar(speed);
-            this.score += 5;
+    handleWormholesCollision(delta){
+        for (let i = 0; i < this.wormholes.length; i++) {
+            // if hit the wormhole, teleport the ball to the other hole
+            const wormhole = this.wormholes[i];
+            const ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            const wormholePos = new THREE.Vector3(wormhole.position.x, wormhole.position.y, 0);
+            const distance = ballPos.distanceTo(wormholePos);
+            if (distance <= 1.5 && !this.inHole) {
+                // teleport to the other wormhole, speed unchanged, change direction
+                this.inHole = true;
+                const otherWormhole = this.wormholes[(i + 1) % this.wormholes.length];
+                this.ball.position.set(otherWormhole.position.x, otherWormhole.position.y, BALL_CONS.init_z);
+                const speed = this.ballVelocity.length();
+                const randomAngle = Math.random() * Math.PI * 2;
+                const randomDirection = new THREE.Vector3(Math.cos(randomAngle), Math.sin(randomAngle), 0);
+                this.ballVelocity = randomDirection.multiplyScalar(speed);
+                this.score += 5;
+                setTimeout(() => {
+                    this.inHole = false;
+                }, 500);
+            } 
         }
+       
     }
 
     checkGameState(){
@@ -994,7 +1020,6 @@ function sphereCollision(sphere, obj){
     }
 }
 
-let closestPointMesh;
 function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
     // Make sure all matrices are up to date
     playField.updateMatrixWorld(true);
