@@ -594,7 +594,7 @@ class PinballGame {
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
-        //this.handleArcCollision(deltaTime);
+         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
     }
 
@@ -694,7 +694,7 @@ class PinballGame {
 
             if (dot <= 0) {
                 this.ballVelocity = this.ballVelocity.reflect(normal);
-            }
+            } 
             else {
                 // let theta = Math.acos(dot);
                 // let newVelocity = velocity.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), 2*theta);
