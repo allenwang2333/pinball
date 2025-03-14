@@ -15,8 +15,6 @@ import {
     META,
 } from './constants';
 
-let temp;
-
 class PinballGame {
     constructor(){
         this.scene = new THREE.Scene();
