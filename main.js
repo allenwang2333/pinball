@@ -71,6 +71,9 @@ class PinballGame {
         // Arch
         this.arc = [];
 
+        // Lower reflector
+        this.lowerBumper = [];
+
         // Track Game State
         this.gameStart = false;
         this.score = 0;
@@ -376,7 +379,7 @@ class PinballGame {
         leftBumper.rotateZ(Math.PI/4);
         leftBumper.position.set(-6 - width/2-0.3, -TABLE_CONS.tableHeight/2+8+height/2-1.2, depth-0.01);
         this.playField.add(leftBumper);
-        this.walls.push(leftBumper);
+        this.lowerBumper.push(leftBumper);
 
         // Lower right wall
         width = 2.3;
@@ -413,7 +416,7 @@ class PinballGame {
         rightBumper.rotateZ(-Math.PI/4);
         rightBumper.position.set(6 + width/2 - 0.6, -TABLE_CONS.tableHeight/2+8+height/2-0.7, depth-0.01);
         this.playField.add(rightBumper);
-        this.walls.push(rightBumper);
+        this.lowerBumper.push(rightBumper);
     }
 
     // Create Arch
@@ -594,8 +597,9 @@ class PinballGame {
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
-        //this.handleArcCollision(deltaTime);
+        this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
+        this.handleLowerBumperCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -611,7 +615,7 @@ class PinballGame {
     }
 
     handleBarrierCollision(deltaTime) {
-
+        
     }
 
     handleLauncherCollision(deltaTime){
@@ -701,7 +705,7 @@ class PinballGame {
                 // this.ballVelocity = newVelocity;
 
             }
-            console.log("dot", dot); 
+            //console.log("dot", dot); 
             this.score += 1;
 
         }
@@ -732,6 +736,47 @@ class PinballGame {
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
         }
+    }
+
+    handleLowerBumperCollision(delta){
+        // Left bumper
+        const left = this.lowerBumper[0];
+        left.obb = createOBBFromObject(left);
+        if (this.ball.obb.intersectsOBB(left.obb)) {
+            const result = sphereCollision(this.ball, left);
+            if (result.collision) {
+                this.handleLowerBumperBounce(result, true);
+            }
+        }
+
+        // Right bumper
+        const right = this.lowerBumper[1];
+        right.obb = createOBBFromObject(right);
+        if (this.ball.obb.intersectsOBB(right.obb)) {
+            const result = sphereCollision(this.ball, right);
+            if (result.collision) {
+                this.handleLowerBumperBounce(result, false);
+            }
+        }
+    }
+
+    handleLowerBumperBounce(result, isLeft){
+        // Each bumper rotate by 45 degrees
+        let normal;
+        if(isLeft) {
+            normal = new THREE.Vector3(1, -1, 0).normalize();
+        } else {
+            normal = new THREE.Vector3(-1, 1, 0).normalize();
+        }
+
+        console.log(normal);
+        const velocity = this.ballVelocity.clone();
+        const dot = velocity.dot(normal);
+        const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(1.5 * dot));
+        bounceVelocity.multiplyScalar(META.bounce_factor);
+        this.ballVelocity.copy(bounceVelocity);
+        const pushDistance = BALL_CONS.radius - result.distance + 0.01;
+        this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
     }
 
     checkGameState(){
@@ -809,7 +854,6 @@ function sphereCollision(sphere, obj){
     if (distance <= BALL_CONS.radius) {
         // calculate the normal vector
         const normal = sphereCenter.clone().sub(closestPoint).normalize();
-        //console.log("normal", normal, "point", closestPoint, );
         return {
             collision: true,
             distance: distance,
