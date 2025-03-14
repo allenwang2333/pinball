@@ -493,6 +493,9 @@ class PinballGame {
         bounding.updateWorldMatrix(true);
         concaveBox.add(bounding);
         this.playField.add(bounding);
+        if (!VISUALIZE_BOUNDING_BOX) {
+            bounding.visible = false;
+        }
         concaveBox.bounding = bounding;
         this.arc.push(concaveBox);
     }
