@@ -657,7 +657,6 @@ class PinballGame {
         //this.score += 1;
         this.ball.obb = createOBBFromObject(this.ball);
         this.handleLauncherCollision(deltaTime);
-        this.handleBarrierCollision(deltaTime);
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
@@ -685,10 +684,6 @@ class PinballGame {
             sound.setVolume(0.5);
             sound.play();
         });
-    }
-
-    handleBarrierCollision(deltaTime) {
-        
     }
 
     handleLauncherCollision(deltaTime){
@@ -822,10 +817,9 @@ class PinballGame {
                 
                 this.ballVelocity = this.ballVelocity.multiplyScalar(-0.88).add(randomAdder);
                 
-                const pushDistance = BALL_CONS.radius + BUMPER_CONS.radius - distance + 0.05;
+                const pushDistance = BALL_CONS.radius + BUMPER_CONS.radius - distance + 0.03;
                 this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
                 
-                console.log(this.ballVelocity);
                 // this.ballVelocity.z = 0;
                 this.score += 1;
             }
@@ -835,31 +829,18 @@ class PinballGame {
     }
 
     handleSpeedBumperCollision(delta){
-        // Acceler
-        // ate the ball at certain direction
-        // Left Speedbumper
-        //console.log(this.ballVelocity);
-        const leftBump = this.speedBumps[0];
-        leftBump.obb = createOBBFromObject(leftBump);
-        if (this.ball.obb.intersectsOBB(leftBump.obb)) {
-            const acceleration = SPEED_BUMPER_CONS.acceleration;
-            const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
-            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
-            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
-            //console.log(this.ballVelocity);
-            this.ballVelocity.z = 0;
-        }
-        
-
-        // Right Speedbumper
-        const rightBump = this.speedBumps[1];
-        rightBump.obb = createOBBFromObject(rightBump);
-        if (this.ball.obb.intersectsOBB(rightBump.obb)) {
-            const acceleration = SPEED_BUMPER_CONS.acceleration;
-            const vecX = acceleration*Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
-            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
-            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
-            this.ballVelocity.z = 0;
+        // accelerate the ball once it hits the speed bump
+        for (let i = 0; i < this.speedBumps.length; i++) {
+            const bumper = this.speedBumps[i];
+            bumper.obb = createOBBFromObject(bumper);
+            if (this.ball.obb.intersectsOBB(bumper.obb)) {
+                const result = sphereCollision(this.ball, bumper);
+                if (result.collision) {
+                    this.ballVelocity.multiplyScalar(SPEED_BUMPER_CONS.speed_factor);
+                    //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
+                    this.score += 1;
+                }
+            }
         }
     }
 
@@ -1047,7 +1028,7 @@ function flipperCollisionHelper(sphere, flipperBox, flipper, playField) {
         const penetrationDepth = BALL_CONS.radius - distance;
 
         // log
-        console.log("closestPoint", closestPoint, "collisionNormal", normal, "penetrationDepth", penetrationDepth);
+        // console.log("closestPoint", closestPoint, "collisionNormal", normal, "penetrationDepth", penetrationDepth);
         
         return {
             collision: true,
