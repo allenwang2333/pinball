@@ -138,7 +138,7 @@ class PinballGame {
         this.createButtons();
         this.createSound();
         // this.createScoreBoard();
-        this.createWarmholes();
+        this.createWormholes();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
@@ -497,7 +497,7 @@ class PinballGame {
         this.arc.push(concaveBox);
     }
 
-    createWarmholes(){
+    createWormholes(){
         const wormholeGeometry = new THREE.CylinderGeometry(1.5, 1.5, 1.2, 32);
         const wormholeMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
         const wormhole1 = new THREE.Mesh(wormholeGeometry, wormholeMaterial);
@@ -672,7 +672,7 @@ class PinballGame {
         this.handleArcCollision(deltaTime);
         this.handleSpeedBumperCollision(deltaTime);
         this.handleRampCollision(deltaTime);
-        this.handleWarmholesCollision(deltaTime);
+        this.handleWormholesCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -852,7 +852,6 @@ class PinballGame {
                     this.ballVelocity.multiplyScalar(SPEED_BUMPER_CONS.speed_factor);
                     //this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
                     this.score += 1;
-                    console.log("Speed Bumper Hit!");
 
                     bumper.userData.hasCollide = true;
                     setTimeout(() => {
@@ -876,7 +875,7 @@ class PinballGame {
         }
     }
 
-    handleWarmholesCollision(delta){
+    handleWormholesCollision(delta){
         for (let i = 0; i < this.wormholes.length; i++) {
             // if hit the wormhole, teleport the ball to the other hole
             const wormhole = this.wormholes[i];
