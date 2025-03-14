@@ -594,7 +594,8 @@ class PinballGame {
         this.handleFlipperCollision(deltaTime);
         this.handleBumperCollision(deltaTime);
         this.handleWallCollision(deltaTime);
-        this.handleArcCollision(deltaTime);
+        //this.handleArcCollision(deltaTime);
+        this.handleSpeedBumperCollision(deltaTime);
     }
 
     handleBounce(result) {
@@ -680,6 +681,29 @@ class PinballGame {
     }
 
     handleBumperCollision(deltaTime){
+    }
+
+    handleSpeedBumperCollision(delta){
+        // Accelerate the ball at certain direction
+        // Left Speedbumper
+        const leftBump = this.speedBumps[0];
+        leftBump.obb = createOBBFromObject(leftBump);
+        if (this.ball.obb.intersectsOBB(leftBump.obb)) {
+            const acceleration = SPEED_BUMPER_CONS.acceleration;
+            const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
+            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
+            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+        }
+
+        // Right Speedbumper
+        const rightBump = this.speedBumps[1];
+        rightBump.obb = createOBBFromObject(rightBump);
+        if (this.ball.obb.intersectsOBB(rightBump.obb)) {
+            const acceleration = SPEED_BUMPER_CONS.acceleration;
+            const vecX = acceleration*Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
+            const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
+            this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+        }
     }
 
     checkGameState(){
