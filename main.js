@@ -16,6 +16,7 @@ import {
     META,
 } from './constants';
 import { FontLoader } from 'three/examples/jsm/Addons.js';
+import { rand } from 'three/tsl';
 
 class PinballGame {
     constructor(){
@@ -627,6 +628,12 @@ class PinballGame {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
+        this.ballVelocity.z = 0;
+        //speed limit
+        // this.ballVelocity.x = Math.min(this.ballVelocity.x, 30);
+        // this.ballVelocity.y = Math.min(this.ballVelocity.y, 30);
+        // this.ballVelocity.x = Math.max(this.ballVelocity.x, -30); 
+        // this.ballVelocity.y = Math.max(this.ballVelocity.y, -30);
     }
 
     handleCollision(deltaTime) {
@@ -750,16 +757,15 @@ class PinballGame {
         const interLines = checkArcCollision(this.arc[0].bounding, this.ball);
         if (interLines.length > 0) {
 
-            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, this.ball.position.z);
-            ballPos.z = 0;
-            let origin = new THREE.Vector3(this.arcOrigin.x-3, this.arcOrigin.y-3, this.arcOrigin.z);
-            origin.z = 0;
+            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            let origin = new THREE.Vector3(this.arcOrigin.x-3, this.arcOrigin.y-3, 0);
             
             let normal = origin.clone().sub(ballPos).normalize();
             let velocity = this.ballVelocity.clone().normalize();
             let dot = velocity.dot(normal);
             if (dot <= 0.1) {
                 this.ballVelocity = this.ballVelocity.reflect(normal).multiplyScalar(0.98);
+                this.ballVelocity.z = 0;
             } 
         }
 
@@ -771,7 +777,18 @@ class PinballGame {
             let bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
             let distance = ballPos.distanceTo(bumperPos);
             if (distance <=  BALL_CONS.radius + BUMPER_CONS.radius) {
-                this.ballVelocity = this.ballVelocity.multiplyScalar(-1.5);
+                // random direction
+                let randX = Math.random();
+                let randY = Math.random();
+                let randomAdder = new THREE.Vector3(randX, randY, 0); 
+                randomAdder.normalize();
+                randomAdder.multiplyScalar(0.1);
+                randomAdder.z = 0;
+                console.log(randomAdder);
+                
+                this.ballVelocity = this.ballVelocity.multiplyScalar(-0.88).add(randomAdder);
+                console.log(this.ballVelocity);
+                this.ballVelocity.z = 0;
                 this.score += 1;
             }
             //console.log(this.ballVelocity);
@@ -783,6 +800,7 @@ class PinballGame {
         // Acceler
         // ate the ball at certain direction
         // Left Speedbumper
+        //console.log(this.ballVelocity);
         const leftBump = this.speedBumps[0];
         leftBump.obb = createOBBFromObject(leftBump);
         if (this.ball.obb.intersectsOBB(leftBump.obb)) {
@@ -790,7 +808,8 @@ class PinballGame {
             const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
-            console.log(this.ballVelocity);
+            //console.log(this.ballVelocity);
+            this.ballVelocity.z = 0;
         }
         
 
@@ -802,6 +821,7 @@ class PinballGame {
             const vecX = acceleration*Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+            this.ballVelocity.z = 0;
         }
     }
 
