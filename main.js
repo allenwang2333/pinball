@@ -613,11 +613,14 @@ class PinballGame {
     handleBarrierCollision(deltaTime) {
 
     }
+
     handleLauncherCollision(deltaTime){
         const ballPos = new THREE.Vector3();
         this.ball.getWorldPosition(ballPos);
         this.launchStick.obb = createOBBFromObject(this.launchStick);
+        this.previousStickCollision = false;
         if (this.ball.obb.intersectsOBB(this.launchStick.obb) && ballPos.y > -TABLE_CONS.tableHeight/2+3+BALL_CONS.radius) { 
+                 
             if (!this.isLaunched &&!this.holdingLauncher) {
                 this.isAttachedToLauncher = true;
                 this.ballVelocity.set(0, 0, 0);
@@ -626,7 +629,13 @@ class PinballGame {
                 this.previousHoldingLauncher = this.holdingLauncher;
                 this.ball.position.y -= (LAUNCHER_CONS.holding_speed * deltaTime);
             }
+            if (this.isLaunched && !this.previousStickCollision && this.ballVelocity.y < 0) {
+                this.reset = true;
+                return;
+            }
+            this.previousStickCollision = true;       
         }
+        this.previousStickCollision = false; 
         if (!this.holdingLauncher && this.previousHoldingLauncher && this.isAttachedToLauncher){
             const launchPower = Math.min((LAUNCHER_CONS.init_y - this.launchStick.position.y) * 20 , LAUNCHER_CONS.max_power);
             this.ballVelocity.set(-1, launchPower, 0); 
@@ -634,7 +643,6 @@ class PinballGame {
             
             this.isLaunched = true;
             this.isAttachedToLauncher = false;
-
 
             this.audioLoader.load('assets/hitball.mp3', (buffer) => {
                 const sound = new THREE.Audio(this.audioListener);
