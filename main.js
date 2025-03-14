@@ -939,8 +939,6 @@ class PinballGame {
         this.updateScoreBoard();
         // Reset
         this.resetGame();
-
-        this.score++;
         
 
         // Update Phong shading matterial
