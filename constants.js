@@ -36,7 +36,7 @@ export const SPEED_BUMPER_CONS = {
     depth: 1,
     color: 0xffff20,
     init_angle: Math.PI / 9,
-    speed_factor: 1.1 , // m/s^2
+    speed_factor: 2 , // m/s^2
 };
 
 export const BALL_CONS = {
