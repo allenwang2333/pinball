@@ -661,6 +661,21 @@ class PinballGame {
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
         this.ballVelocity.z = 0;
+        this.ball.position.z = BALL_CONS.init_z;
+
+        // boundary check
+        const tableWidth = TABLE_CONS.tableWidth/2 - BALL_CONS.radius;
+        const tableHeight = TABLE_CONS.tableHeight/2 - BALL_CONS.radius;
+        if (this.ball.position.x > tableWidth || this.ball.position.x < -tableWidth) {
+            this.ballVelocity.x = -this.ballVelocity.x;
+            this.ball.position.x = Math.max(Math.min(this.ball.position.x, tableWidth), -tableWidth);
+        }
+
+        if (this.ball.position.y > tableHeight || this.ball.position.y < -tableHeight) {
+            this.ballVelocity.y = -this.ballVelocity.y;
+            this.ball.position.y = Math.max(Math.min(this.ball.position.y, tableHeight), -tableHeight);
+        }
+
         //speed limit
         // this.ballVelocity.x = Math.min(this.ballVelocity.x, 30);
         // this.ballVelocity.y = Math.min(this.ballVelocity.y, 30);
