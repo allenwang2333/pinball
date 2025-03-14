@@ -710,26 +710,16 @@ class PinballGame {
         if (interLines.length > 0) {
 
             let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, this.ball.position.z);
-            ballPos.z = 1;
-            let origin = new THREE.Vector3(this.arcOrigin.x, this.arcOrigin.y, this.arcOrigin.z);
-            origin.z = 1;
+            ballPos.z = 0;
+            let origin = new THREE.Vector3(this.arcOrigin.x-3, this.arcOrigin.y-3, this.arcOrigin.z);
+            origin.z = 0;
             
             let normal = origin.clone().sub(ballPos).normalize();
             let velocity = this.ballVelocity.clone().normalize();
             let dot = velocity.dot(normal);
-
-            if (dot <= 0) {
-                this.ballVelocity = this.ballVelocity.reflect(normal);
+            if (dot <= 0.1) {
+                this.ballVelocity = this.ballVelocity.reflect(normal).multiplyScalar(0.98);
             } 
-            else {
-                // let theta = Math.acos(dot);
-                // let newVelocity = velocity.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), 2*theta);
-                // this.ballVelocity = newVelocity;
-
-            }
-            //console.log("dot", dot); 
-            this.score += 1;
-
         }
 
     }
@@ -738,7 +728,8 @@ class PinballGame {
     }
 
     handleSpeedBumperCollision(delta){
-        // Accelerate the ball at certain direction
+        // Acceler
+        // ate the ball at certain direction
         // Left Speedbumper
         const leftBump = this.speedBumps[0];
         leftBump.obb = createOBBFromObject(leftBump);
