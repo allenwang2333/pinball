@@ -96,8 +96,11 @@ class PinballGame {
         this.reset = false;
         this.lastTime = 0;
         this.clock = new THREE.Clock();
+
+        // Difficulty
         this.settings = {
-            difficulty: 1
+            difficulty: 1,
+            ratio: 1,
         }
         this.gui = new GUI();
 
@@ -540,10 +543,8 @@ class PinballGame {
 
     createButtons(){
         const folder = this.gui.addFolder('Game Settings');
-        folder.add(this.settings, 'difficulty', 1, 5).onChange((value) => {
-            this.settings.difficulty = value;
-            console.log('Difficulty set to: ', value);
-        });
+        folder.add(this.settings, 'difficulty', 1, 5, 1).onChange().listen((value) => {
+            this.settings.difficulty = value;});
         folder.open();
     }
 
@@ -673,7 +674,7 @@ class PinballGame {
         const velocity = this.ballVelocity.clone();
         const dot = velocity.dot(normal);
         const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(2 * dot));
-        bounceVelocity.multiplyScalar(META.bounce_factor);
+        bounceVelocity.multiplyScalar(META.bounce_factor*this.settings.ratio);
         this.ballVelocity.copy(bounceVelocity);
         const pushDistance = BALL_CONS.radius - result.distance + 0.05;
         this.ball.position.add(normal.clone().multiplyScalar(pushDistance));
@@ -899,22 +900,30 @@ class PinballGame {
             this.reset = true;
             this.history.push(this.score);
         } else {
-            this.settings.difficulty = this.score % 200 + 1;
+            const new_difficulty = Math.floor(this.score / 10 + 1);
+            if (new_difficulty > this.settings.difficulty) {
+                this.settings.difficulty = new_difficulty;
+            } 
             switch (this.settings.difficulty){
                 case 1:
                     this.gravity.y = DIFFICULTY.level_1;
+                    this.settings.ratio = 1;
                     break;
                 case 2:
                     this.gravity.y = DIFFICULTY.level_2;
+                    this.settings.ratio = 1.05;
                     break;
                 case 3:
                     this.gravity.y = DIFFICULTY.level_3;
+                    this.settings.ratio = 1.1;
                     break;
                 case 4:
                     this.gravity.y = DIFFICULTY.level_4;
+                    this.settings.ratio = 1.15;
                     break;
                 case 5:
                     this.gravity.y = DIFFICULTY.level_5;
+                    this.settings.ratio = 1.2;
                     break;
             }
 
@@ -928,6 +937,7 @@ class PinballGame {
     }
 
     animate(){
+        console.log(this.gravity);
         this.controls.update();
         requestAnimationFrame(this.animate.bind(this));
         const currentTime = this.clock.getElapsedTime();
