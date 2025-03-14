@@ -442,7 +442,7 @@ class PinballGame {
         concaveBox.castShadow = true;
 
         concaveBox.position.set(TABLE_CONS.tableWidth/2-width/2, TABLE_CONS.tableHeight/2-height/2, TABLE_CONS.wallDepth/4);
-
+        this.arcOrigin = new THREE.Vector3(TABLE_CONS.tableWidth/2-width/2, TABLE_CONS.tableHeight/2-height/2, TABLE_CONS.wallDepth/4);
         this.playField.add(concaveBox);
         
         // Bounding Box with Segments
@@ -682,8 +682,28 @@ class PinballGame {
         this.arc[0].updateMatrixWorld(true);
         const interLines = checkArcCollision(this.arc[0].bounding, this.ball);
         if (interLines.length > 0) {
-            console.log("in");
-            this.ballVelocity.set(0, 0, 0);
+
+            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, this.ball.position.z);
+            ballPos.z = 1;
+            let origin = new THREE.Vector3(this.arcOrigin.x, this.arcOrigin.y, this.arcOrigin.z);
+            origin.z = 1;
+            
+            let normal = origin.clone().sub(ballPos).normalize();
+            let velocity = this.ballVelocity.clone().normalize();
+            let dot = velocity.dot(normal);
+
+            if (dot <= 0) {
+                this.ballVelocity = this.ballVelocity.reflect(normal);
+            }
+            else {
+                // let theta = Math.acos(dot);
+                // let newVelocity = velocity.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), 2*theta);
+                // this.ballVelocity = newVelocity;
+
+            }
+            console.log("dot", dot); 
+            this.score += 1;
+
         }
 
     }
