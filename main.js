@@ -637,6 +637,8 @@ class PinballGame {
             this.previousHoldingLauncher = false;
             this.score = 0;
             this.reset = false;
+            this.settings.difficulty = 0;
+            this.settings.ratio = 1;
         }
     }
 
@@ -644,6 +646,10 @@ class PinballGame {
         // this.ball.obb = createOBBFromObject(this.ball);
         if (this.gameStart && this.isLaunched) {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
+            if (this.ballVelocity.length() > META.maxSpeed) {
+                this.ballVelocity.normalize().multiplyScalar(Math.sqrt(META.maxSpeed**2/3));
+                console.log(this.ballVelocity);
+            }
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
         this.ballVelocity.z = 0;
@@ -881,7 +887,7 @@ class PinballGame {
             this.reset = true;
             this.history.push(this.score);
         } else {
-            const new_difficulty = Math.floor(this.score / 10 + 1);
+            const new_difficulty = Math.min(Math.floor(this.score / 10 + 1), 5);
             if (new_difficulty > this.settings.difficulty) {
                 this.settings.difficulty = new_difficulty;
             } 
@@ -896,15 +902,15 @@ class PinballGame {
                     break;
                 case 3:
                     this.gravity.y = DIFFICULTY.level_3;
-                    this.settings.ratio = 1.1;
+                    this.settings.ratio = 1.7;
                     break;
                 case 4:
                     this.gravity.y = DIFFICULTY.level_4;
-                    this.settings.ratio = 1.15;
+                    this.settings.ratio = 1.19;
                     break;
                 case 5:
                     this.gravity.y = DIFFICULTY.level_5;
-                    this.settings.ratio = 1.2;
+                    this.settings.ratio = 1.21;
                     break;
             }
 
@@ -918,7 +924,6 @@ class PinballGame {
     }
 
     animate(){
-        console.log(this.gravity);
         this.controls.update();
         requestAnimationFrame(this.animate.bind(this));
         const currentTime = this.clock.getElapsedTime();
