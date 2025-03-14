@@ -76,3 +76,11 @@ export const BOTTOM_BARRIER = {
 };
 
 export const VISUALIZE_BOUNDING_BOX = true;
+
+export const DIFFICULTY = {
+    level_1: -9.81,
+    level_2: -15,
+    level_3: -20,
+    level_4: -25,
+    level_5: -30,
+}
