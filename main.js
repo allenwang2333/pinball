@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { OBB } from 'three/addons/math/OBB.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { 
     TABLE_CONS, 
     FLIPPER_CONS, 
@@ -15,6 +16,8 @@ import {
     META,
     DIFFICULTY,
 } from './constants';
+import { FontLoader } from 'three/examples/jsm/Addons.js';
+import { rand } from 'three/tsl';
 
 class PinballGame {
     constructor(){
@@ -109,6 +112,8 @@ class PinballGame {
         this.audioListener = null;
         this.audioLoader = null;
         this.sound = null;
+        this.fontLoader = null;
+        this.textGeometry = null;
         this.init();
         
     }
@@ -125,14 +130,38 @@ class PinballGame {
         this.scoreBoard();
         this.createButtons();
         this.createSound();
+        this.createScoreBoard();
         this.playField.rotateX(-PLAY_FIELD_CONS.tilt_angle);
         this.scene.add(this.playField);
         document.addEventListener('keydown', this.handleKeyDown);
         document.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('resize', this.onWindowResize, false);
         this.animate();
-    
         
+        
+    }
+
+    createScoreBoard() {
+        
+        this.fontLoader = new FontLoader();
+        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+                font: font,
+		        size: 2,
+		        depth: 0.5,
+		        curveSegments: 12,
+            });
+            this.textGeometry = textGeometry;
+            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const scoreBoardMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const scoreBoardGeometry = new THREE.BoxGeometry(20, 5, 0);
+            const scoreBoardBackGround = new THREE.Mesh(scoreBoardGeometry, scoreBoardMaterial);
+            scoreBoardBackGround.position.set(0, 16, 0);
+            this.scene.add(scoreBoardBackGround);
+            this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
+            this.scoreBoard.position.set(-5, 15, 0);
+            this.scene.add(this.scoreBoard);
+        });
     }
 
     createTable(){
@@ -477,6 +506,20 @@ class PinballGame {
             if (i === 2) this.firstThree['3rd'] = this.history[i];
         }
         this.firstThree['Current Score'] = this.score;
+
+        this.fontLoader.load('assets/helvetiker_regular.typeface.json', (font) => {
+            let textGeometry = new TextGeometry(`Score: ${this.score}`, {
+                font: font,
+		        size: 2,
+		        depth: 0.5,
+		        curveSegments: 12,
+            });
+            this.textGeometry = textGeometry;
+            const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
+            this.scoreBoard.position.set(-7, 15, 0);
+            this.scene.children[4] = this.scoreBoard;
+        });
     }
 
     createButtons(){
@@ -586,9 +629,16 @@ class PinballGame {
             this.ballVelocity.add(this.gravity.clone().multiplyScalar(delta));
             this.ball.position.add(this.ballVelocity.clone().multiplyScalar(delta));
         }
+        this.ballVelocity.z = 0;
+        //speed limit
+        // this.ballVelocity.x = Math.min(this.ballVelocity.x, 30);
+        // this.ballVelocity.y = Math.min(this.ballVelocity.y, 30);
+        // this.ballVelocity.x = Math.max(this.ballVelocity.x, -30); 
+        // this.ballVelocity.y = Math.max(this.ballVelocity.y, -30);
     }
 
     handleCollision(deltaTime) {
+        //this.score += 1;
         this.ball.obb = createOBBFromObject(this.ball);
         this.handleLauncherCollision(deltaTime);
         this.handleBarrierCollision(deltaTime);
@@ -708,28 +758,50 @@ class PinballGame {
         const interLines = checkArcCollision(this.arc[0].bounding, this.ball);
         if (interLines.length > 0) {
 
-            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, this.ball.position.z);
-            ballPos.z = 0;
-            let origin = new THREE.Vector3(this.arcOrigin.x-3, this.arcOrigin.y-3, this.arcOrigin.z);
-            origin.z = 0;
+            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            let origin = new THREE.Vector3(this.arcOrigin.x-3, this.arcOrigin.y-3, 0);
             
             let normal = origin.clone().sub(ballPos).normalize();
             let velocity = this.ballVelocity.clone().normalize();
             let dot = velocity.dot(normal);
             if (dot <= 0.1) {
                 this.ballVelocity = this.ballVelocity.reflect(normal).multiplyScalar(0.98);
+                this.ballVelocity.z = 0;
             } 
         }
 
     }
 
     handleBumperCollision(deltaTime){
+        for (let i = 0; i < this.bumpers.length; i++) {
+            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            let bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
+            let distance = ballPos.distanceTo(bumperPos);
+            if (distance <=  BALL_CONS.radius + BUMPER_CONS.radius) {
+                // random direction
+                let randX = Math.random();
+                let randY = Math.random();
+                let randomAdder = new THREE.Vector3(randX, randY, 0); 
+                randomAdder.normalize();
+                randomAdder.multiplyScalar(0.1);
+                randomAdder.z = 0;
+                console.log(randomAdder);
+                
+                this.ballVelocity = this.ballVelocity.multiplyScalar(-0.88).add(randomAdder);
+                console.log(this.ballVelocity);
+                this.ballVelocity.z = 0;
+                this.score += 1;
+            }
+            //console.log(this.ballVelocity);
+        }
+
     }
 
     handleSpeedBumperCollision(delta){
         // Acceler
         // ate the ball at certain direction
         // Left Speedbumper
+        //console.log(this.ballVelocity);
         const leftBump = this.speedBumps[0];
         leftBump.obb = createOBBFromObject(leftBump);
         if (this.ball.obb.intersectsOBB(leftBump.obb)) {
@@ -737,7 +809,10 @@ class PinballGame {
             const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+            //console.log(this.ballVelocity);
+            this.ballVelocity.z = 0;
         }
+        
 
         // Right Speedbumper
         const rightBump = this.speedBumps[1];
@@ -747,6 +822,7 @@ class PinballGame {
             const vecX = acceleration*Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+            this.ballVelocity.z = 0;
         }
     }
 
@@ -780,8 +856,6 @@ class PinballGame {
         } else {
             normal = new THREE.Vector3(-1, 1, 0).normalize();
         }
-
-        console.log(normal);
         const velocity = this.ballVelocity.clone();
         const dot = velocity.dot(normal);
         const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(1.5 * dot));
