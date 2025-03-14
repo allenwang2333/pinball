@@ -517,7 +517,6 @@ class PinballGame {
             this.scoreBoard = new THREE.Mesh(textGeometry, textMaterial);
             this.scoreBoard.position.set(-7, 15, 0);
             this.scene.children[4] = this.scoreBoard;
-            console.log(this.scene.children);
         });
     }
 
@@ -767,6 +766,17 @@ class PinballGame {
     }
 
     handleBumperCollision(deltaTime){
+        for (let i = 0; i < this.bumpers.length; i++) {
+            let ballPos = new THREE.Vector3(this.ball.position.x, this.ball.position.y, 0);
+            let bumperPos = new THREE.Vector3(this.bumpers[i].position.x, this.bumpers[i].position.y, 0);
+            let distance = ballPos.distanceTo(bumperPos);
+            if (distance <=  BALL_CONS.radius + BUMPER_CONS.radius) {
+                this.ballVelocity = this.ballVelocity.multiplyScalar(-1.5);
+                this.score += 1;
+            }
+            //console.log(this.ballVelocity);
+        }
+
     }
 
     handleSpeedBumperCollision(delta){
@@ -780,7 +790,9 @@ class PinballGame {
             const vecX = acceleration*-Math.cos(SPEED_BUMPER_CONS.init_angle)*delta;
             const vecY = acceleration*Math.sin(SPEED_BUMPER_CONS.init_angle)*delta;
             this.ballVelocity.add(new THREE.Vector3(vecX, vecY, 0));
+            console.log(this.ballVelocity);
         }
+        
 
         // Right Speedbumper
         const rightBump = this.speedBumps[1];
@@ -823,8 +835,6 @@ class PinballGame {
         } else {
             normal = new THREE.Vector3(-1, 1, 0).normalize();
         }
-
-        console.log(normal);
         const velocity = this.ballVelocity.clone();
         const dot = velocity.dot(normal);
         const bounceVelocity = velocity.clone().sub(normal.clone().multiplyScalar(1.5 * dot));
